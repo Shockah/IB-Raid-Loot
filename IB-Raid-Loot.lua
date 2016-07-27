@@ -99,7 +99,9 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
 	icon = [[Interface\Icons\inv_misc_dice_01]],
 	OnClick = function(self, button)
 		if button == "LeftButton" then
-			IBRaidLoot:CreatePendingRollsFrame()
+			if not IBRaidLoot:DidRollOnAllItems() then
+				IBRaidLoot:CreatePendingRollsFrame()
+			end
 		elseif button == "RightButton" then
 			if next(currentLootIDs) ~= nil then
 				IBRaidLoot:CreateRollSummaryFrame()
@@ -396,7 +398,7 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj)
 
 		GiveMasterLoot(lootSlotIndex, candidateIndex)
 	end
-	
+
 	lootObj["player"] = player
 	self:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
 end
@@ -417,6 +419,15 @@ function IBRaidLoot:DidRollOnItem(lootObj)
 	end
 
 	return rollObj["type"] ~= "Pending"
+end
+
+function IBRaidLoot:DidRollOnAllItems()
+	for uniqueLootID, lootObj in pairs(currentLoot) do
+		if not self:DidRollOnItem(lootObj) then
+			return false
+		end
+	end
+	return true
 end
 
 function IBRaidLoot:DidEveryoneRollOnItem(lootObj)
