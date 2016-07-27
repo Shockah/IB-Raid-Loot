@@ -1,116 +1,124 @@
 local Frame = nil
-local ItemIcon = nil
-local ItemName = nil
-local PrevButton = nil
-local NextButton = nil
-local IndexText = nil
 local LinesFrame = nil
-local LineFrames = 0
 local currentIndex = 1
 
 local currentLootIDs = IBRaidLootData["currentLootIDs"]
 local currentLoot = IBRaidLootData["currentLoot"]
-local RollTypes = IBRaidLootData["RollTypes"]
-local RollTypeList = IBRaidLootData["RollTypeList"]
+local RollTypes = IBRaidLootSettings["RollTypes"]
+local RollTypeList = IBRaidLootSettings["RollTypeList"]
 
 function IBRaidLoot:CreateRollSummaryFrame()
 	if Frame ~= nil then
-		self:UpdateRollSummaryFrame()
 		Frame:Show()
+		self:UpdateRollSummaryFrame()
 		return Frame
 	end
 
-	Frame = CreateFrame("Frame", "IBRaidLoot_RollSummaryFrame", UIParent)
-	Frame:SetMovable(true)
-	Frame:SetUserPlaced(true)
+	Frame = CreateFrame("Frame", "IBRaidLoot_RollSummaryFrame", UIParent, "BasicFrameTemplateWithInset")
 	Frame:SetFrameStrata("HIGH")
-	Frame:SetWidth(350)
-	Frame:SetHeight(400)
+	Frame:SetSize(350, 400)
 	Frame:SetPoint("CENTER", 0, 0)
-	Frame:SetBackdrop({
-		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-		tile = true, tileSize = 32, edgeSize = 32,
-		insets = { left = 8, right = 8, top = 8, bottom = 8 }
-	})
-	Frame:SetBackdropColor(0, 0, 0, 1)
-	Frame:Show()
-	table.insert(UISpecialFrames, "IBRaidLoot_RollSummaryFrame")
+	Frame:EnableMouse(true)
+	Frame:SetMovable(true)
 
-	self:SetupWindowFrame(Frame, "Roll Summary")
+	table.insert(UISpecialFrames, "IBRaidLoot_PendingRollsFrame")
+	self:SetupWindowFrame(Frame)
 
-	ItemIcon = CreateFrame("Button", nil, Frame, "ItemButtonTemplate")
-	ItemIcon:SetWidth(32)
-	ItemIcon:SetHeight(32)
-	ItemIcon.icon:SetWidth(32)
-	ItemIcon.icon:SetHeight(32)
-	ItemIcon:SetPoint("TOPLEFT", 18, -36)
-	ItemIcon:SetScript("OnLeave", function(self)
+	local fTitle = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	fTitle:SetPoint("TOP", 0, -6)
+	fTitle:SetText("Roll Summary")
+	fTitle:SetJustifyV("TOP")
+	Frame.title = fTitle
+
+	local fContent = CreateFrame("Frame", nil, Frame)
+	fContent:SetSize(Frame:GetWidth() - 24, Frame:GetHeight() - 24 - 12)
+	fContent:SetPoint("TOPLEFT", 12, -24 - 6)
+
+	local fScroll = CreateFrame("ScrollFrame", nil, fContent, "UIPanelScrollFrameTemplate")
+	fScroll:SetSize(fContent:GetWidth() - 24, fContent:GetHeight() - 56)
+	fScroll:SetPoint("TOPLEFT", 0, -56)
+
+	LinesFrame = CreateFrame("Frame", nil, nil, nil);
+	LinesFrame:SetWidth(fScroll:GetWidth())
+	LinesFrame:SetPoint("TOPLEFT", 0, 0)
+	fScroll:SetScrollChild(LinesFrame)
+	LinesFrame.subframeCount = 0
+	LinesFrame.subframes = {}
+	LinesFrame:Show()
+
+	local fIcon = CreateFrame("Button", nil, fContent, "ItemButtonTemplate")
+	fIcon:SetSize(32, 32)
+	fIcon.icon:SetSize(32, 32)
+	fIcon:SetPoint("TOPLEFT", 0, 0)
+	fIcon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
 	end)
-	ItemIcon:RegisterForClicks("RightButtonDown")
+	fIcon:RegisterForClicks("RightButtonDown")
+	Frame.icon = fIcon
 
-	ItemName = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	ItemName:SetPoint("LEFT", ItemIcon, "RIGHT", 6, 0)
-	ItemName:SetWidth(Frame:GetWidth() - 18 * 2 - ItemIcon:GetWidth() - 12 - 96 - 4)
-	ItemName:SetJustifyH("LEFT")
+	local fName = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	fName:SetPoint("LEFT", fIcon, "RIGHT", 6, 0)
+	fName:SetWidth(fContent:GetWidth() - 32 - 12 - 24 * 2 - 48 - 4)
+	fName:SetJustifyH("LEFT")
+	Frame.name = fName
 
-	PrevButton = CreateFrame("Button", nil, Frame, "UIPanelButtonTemplate")
-	PrevButton:SetPoint("LEFT", ItemName, "RIGHT", 6, 0)
-	PrevButton:SetWidth(24)
-	PrevButton:SetText("<")
-	PrevButton:SetScript("OnClick", function(self)
+	local fPrevButton = CreateFrame("Button", nil, fContent, "UIPanelButtonTemplate")
+	fPrevButton:SetPoint("LEFT", fName, "RIGHT", 6, 0)
+	fPrevButton:SetWidth(24)
+	fPrevButton:SetText("<")
+	fPrevButton:SetScript("OnClick", function(self)
 		IBRaidLoot:GoToPrevRollSummaryLoot()
 	end)
+	Frame.prevButton = fPrevButton
 
-	IndexText = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	IndexText:SetPoint("LEFT", PrevButton, "RIGHT", 2, 0)
-	IndexText:SetWidth(48)
-	IndexText:SetJustifyH("CENTER")
+	local fIndexText = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	fIndexText:SetPoint("LEFT", fPrevButton, "RIGHT", 2, 0)
+	fIndexText:SetWidth(48)
+	fIndexText:SetJustifyH("CENTER")
+	Frame.indexText = fIndexText
 
-	NextButton = CreateFrame("Button", "IBRaidLoot_RollSummaryNextItemButton", Frame, "UIPanelButtonTemplate")
-	NextButton:SetPoint("LEFT", IndexText, "RIGHT", 2, 0)
-	NextButton:SetWidth(24)
-	NextButton:SetText(">")
-	NextButton:SetScript("OnClick", function(self)
+	local fNextButton = CreateFrame("Button", nil, fContent, "UIPanelButtonTemplate")
+	fNextButton:SetPoint("LEFT", fIndexText, "RIGHT", 2, 0)
+	fNextButton:SetWidth(24)
+	fNextButton:SetText(">")
+	fNextButton:SetScript("OnClick", function(self)
 		IBRaidLoot:GoToNextRollSummaryLoot()
 	end)
+	Frame.nextButton = fNextButton
 
-	local fPlayerText = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-	fPlayerText:SetPoint("TOPLEFT", 18, -24 - 64 + 16)
+	local fPlayerText = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	fPlayerText:SetPoint("TOPLEFT", 0, -40)
 	fPlayerText:SetSize(170, 15)
 	fPlayerText:SetJustifyH("LEFT")
 	fPlayerText:SetText("Player")
 
-	local fRollTypeText = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	local fRollTypeText = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	fRollTypeText:SetPoint("LEFT", fPlayerText, "RIGHT", 0, 0)
-	fRollTypeText:SetSize(80, 15)
+	fRollTypeText:SetSize(100, 15)
 	fRollTypeText:SetJustifyH("LEFT")
 	fRollTypeText:SetText("Option")
 
-	local fRollValueText = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	local fRollValueText = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 	fRollValueText:SetPoint("LEFT", fRollTypeText, "RIGHT", 0, 0)
 	fRollValueText:SetSize(40, 15)
 	fRollValueText:SetJustifyH("LEFT")
 	fRollValueText:SetText("Roll")
 
-	local fScroll = CreateFrame("ScrollFrame", "IBRaidLoot_RollSummaryScrollFrame", Frame, "UIPanelScrollFrameTemplate")
-	fScroll:SetWidth(fScroll:GetParent():GetWidth() - 24 - 24)
-	fScroll:SetHeight(fScroll:GetParent():GetHeight() - 36 - 64)
-	fScroll:SetPoint("TOPLEFT", 12, -24 - 64)
-	fScroll:Show()
-
-	LinesFrame = CreateFrame("Frame", "IBRaidLoot_RollSummaryContentFrame", nil, nil);
-	LinesFrame:SetWidth(fScroll:GetWidth())
-	LinesFrame:SetHeight(60)
-	LinesFrame:SetBackdrop({
-		bgFile = "",
-		edgeFile = "",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = {left = 1, right = 1, top = 1, bottom = 1}
-	})
-	fScroll:SetScrollChild(LinesFrame)
-	LinesFrame:Show()
+	StaticPopupDialogs["IBRaidLoot_RollSummary_Confirm"] = {
+		text = "Are you sure you want to give this item to %s?",
+		button1 = ACCEPT,
+		button2 = CANCEL,
+		OnAccept = function(self, data)
+			self:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
+		end,
+		OnCancel = function(_, reason)
+		end,
+		sound = "levelup2",
+		timeout = 30,
+		whileDead = true,
+		hideOnEscape = true,
+		showAlert = true
+	}
 
 	self:UpdateRollSummaryFrame()
 	return Frame
@@ -138,20 +146,20 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 
 	local lootObj = self:GetCurrentRollSummaryLoot()
 
-	ItemIcon.icon:SetTexture(lootObj["texture"])
-	ItemIcon:SetScript("OnEnter", function(self)
+	Frame.icon.icon:SetTexture(lootObj["texture"])
+	Frame.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
 	end)
 
 	local r, g, b = GetItemQualityColor(lootObj["quality"])
-	ItemName:SetText(lootObj["name"])
-	ItemName:SetTextColor(r, g, b, 1)
+	Frame.name:SetText(lootObj["name"])
+	Frame.name:SetTextColor(r, g, b, 1)
 
-	IndexText:SetText(currentIndex.." / "..self:sizeof(currentLootIDs))
+	Frame.indexText:SetText(currentIndex.." / "..self:sizeof(currentLootIDs))
 
-	PrevButton:SetEnabled(currentIndex > 1)
-	NextButton:SetEnabled(currentIndex < self:sizeof(currentLootIDs))
+	Frame.prevButton:SetEnabled(currentIndex > 1)
+	Frame.nextButton:SetEnabled(currentIndex < self:sizeof(currentLootIDs))
 
 	self:UpdateRollSummaryRollsFrame()
 end
@@ -160,68 +168,72 @@ function IBRaidLoot:CreateRollSummaryRollFrames()
 	local lootObj = self:GetCurrentRollSummaryLoot()
 	local rolls = self:GetSortedRolls(lootObj)
 	table.foreach(rolls, function(_, rollObj)
-		IBRaidLoot:CreateRollSummaryRollFrame(rollObj)
+		IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 	end)
 end
 
-function IBRaidLoot:CreateRollSummaryRollFrame(rollObj)
-	local i = LineFrames + 1
-	local f = _G["IBRaidLoot_RollSummaryRollFrame"..i]
-	local fPlayerText = nil
-	local fRollTypeText = nil
-	local fRollValueText = nil
+function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
+	local i = LinesFrame.subframeCount + 1
+	local f = LinesFrame.subframes[i]
 
-	LineFrames = LineFrames + 1
+	local HEIGHT = 18
+
+	LinesFrame.subframeCount = LinesFrame.subframeCount + 1
 	if f == nil then
-		f = CreateFrame("Frame", "IBRaidLoot_RollSummaryRollFrame"..i, LinesFrame, nil)
+		f = CreateFrame("Button", nil, LinesFrame)
+		LinesFrame.subframes[i] = f
 		f:SetWidth(LinesFrame:GetWidth())
-		f:SetHeight(18)
-		f:SetPoint("TOPLEFT", 0, -18 * (i - 1))
+		f:SetHeight(HEIGHT)
+		f:SetPoint("TOPLEFT", 0, -HEIGHT * (i - 1))
 
-		fPlayerText = f:CreateFontString("IBRaidLoot_RollSummaryRollFramePlayerText"..i, "ARTWORK", "GameFontWhiteSmall")
-		fPlayerText:SetPoint("TOPLEFT", 6, 0)
+		local fPlayerText = f:CreateFontString(nil, "ARTWORK", "GameFontWhiteSmall")
+		fPlayerText:SetPoint("TOPLEFT", 0, 0)
 		fPlayerText:SetSize(170, 15)
 		fPlayerText:SetJustifyH("LEFT")
+		f.playerText = fPlayerText
 
-		fRollTypeText = f:CreateFontString("IBRaidLoot_RollSummaryRollFrameRollTypeText"..i, "ARTWORK", "GameFontWhiteSmall")
+		local fRollTypeText = f:CreateFontString(nil, "ARTWORK", "GameFontWhiteSmall")
 		fRollTypeText:SetPoint("LEFT", fPlayerText, "RIGHT", 0, 0)
-		fRollTypeText:SetSize(80, 15)
+		fRollTypeText:SetSize(100, 15)
 		fRollTypeText:SetJustifyH("LEFT")
+		f.rollTypeText = fRollTypeText
 
-		fRollValueText = f:CreateFontString("IBRaidLoot_RollSummaryRollFrameRollValueText"..i, "ARTWORK", "GameFontWhiteSmall")
+		local fRollValueText = f:CreateFontString(nil, "ARTWORK", "GameFontWhiteSmall")
 		fRollValueText:SetPoint("LEFT", fRollTypeText, "RIGHT", 0, 0)
 		fRollValueText:SetSize(40, 15)
 		fRollValueText:SetJustifyH("LEFT")
-	else
-		fIcon = _G["IBRaidLoot_PendingRollsItemIcon"..i]
-		fName = _G["IBRaidLoot_PendingRollsItemName"..i]
-		fPlayerText = _G["IBRaidLoot_RollSummaryRollFramePlayerText"..i]
-		fRollTypeText = _G["IBRaidLoot_RollSummaryRollFrameRollTypeText"..i]
-		fRollValueText = _G["IBRaidLoot_RollSummaryRollFrameRollValueText"..i]
+		f.rollValueText = fRollValueText
 	end
 
-	fPlayerText:SetText(rollObj["player"])
-	fRollTypeText:SetText(rollObj["type"])
+	f.playerText:SetText(rollObj["player"])
+	f.rollTypeText:SetText(rollObj["type"])
 	if RollTypes[rollObj["type"]]["shouldRoll"] then
-		fRollValueText:SetText(rollObj["value"])
+		f.rollValueText:SetText(rollObj["value"])
 	else
-		fRollValueText:SetText("")
+		f.rollValueText:SetText("")
 	end
 
-	LinesFrame:SetHeight(18 * i)
+	f:SetScript("OnClick", function(self, button)
+		if IBRaidLoot:IsMasterLooter() then
+			local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", rollObj["player"])
+			if dialog then
+				local data = {}
+				data["rollObj"] = rollObj
+				data["lootObj"] = lootObj
+				dialog.data = data
+			end
+		end
+	end)
+
+	LinesFrame:SetHeight(HEIGHT * i)
 	f:Show()
-	
-	return f
 end
 
 function IBRaidLoot:ClearRollSummaryRollFrames()
-	for i = 1, LineFrames do
-		local f = _G["IBRaidLoot_RollSummaryRollFrame"..i]
-		if f ~= nil then
-			f:Hide()
-		end
+	for _, frame in pairs(LinesFrame.subframes) do
+		frame:Hide()
 	end
-	LineFrames = 0
+	LinesFrame.subframeCount = 0
 end
 
 function IBRaidLoot:UpdateRollSummaryRollsFrame()

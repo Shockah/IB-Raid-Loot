@@ -1,4 +1,5 @@
 IBRaidLoot = LibStub("AceAddon-3.0"):NewAddon("IBRaidLoot", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceBucket-3.0", "AceTimer-3.0")
+local lwin = LibStub("LibWindow-1.1")
 if not IBRaidLootDB then
 	IBRaidLootDB = {}
 end
@@ -6,17 +7,17 @@ end
 IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
 IBRaidLootSettings["DEBUG_MODE"] = true
+IBRaidLootSettings["RollTypes"] = {}
+IBRaidLootSettings["RollTypeList"] = {}
 
 IBRaidLootData = {}
 IBRaidLootData["currentLootIDs"] = {}
 IBRaidLootData["currentLoot"] = {}
-IBRaidLootData["RollTypes"] = {}
-IBRaidLootData["RollTypeList"] = {}
 
 local currentLootIDs = IBRaidLootData["currentLootIDs"]
 local currentLoot = IBRaidLootData["currentLoot"]
-local RollTypes = IBRaidLootData["RollTypes"]
-local RollTypeList = IBRaidLootData["RollTypeList"]
+local RollTypes = IBRaidLootSettings["RollTypes"]
+local RollTypeList = IBRaidLootSettings["RollTypeList"]
 
 local RollType = nil
 
@@ -119,6 +120,7 @@ local icon = LibStub("LibDBIcon-1.0")
 -------
 
 function IBRaidLoot:OnInitialize()
+	self:RegisterEvent("ADDON_LOADED", "OnAddonLoaded")
 	self:RegisterBucketEvent("LOOT_READY", 0.25, "OnLootOpened")
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 
@@ -140,6 +142,13 @@ end
 
 function IBRaidLoot:OnDisable()
 	self:UnregisterAllEvents()
+end
+
+function IBRaidLoot:OnAddonLoaded(event, addon)
+	if addon == "Aurora" then
+		IBRaidLoot.AuroraF, IBRaidLoot.AuroraC = unpack(Aurora)
+		self:UnregisterEvent("ADDON_LOADED")
+	end
 end
 
 function IBRaidLoot:OnSlashCommand(input)
@@ -314,6 +323,46 @@ end
 -- helper functions
 -------
 
+function IBRaidLoot:FindLootSlotForLootObj(lootObj)
+	local numLootItems = GetNumLootItems()
+	for i = 1, numLootItems do
+		local texture, item, quantity, quality, locked = GetLootSlotInfo(i)
+		local lootSlotType = GetLootSlotType(i)
+
+		local link = GetLootSlotLink(i)
+		local corpseGUID = GetLootSourceInfo(i)
+		local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
+		if uniqueLootID == lootObj["uniqueLootId"] then
+			return i
+		end
+	end
+	return false
+end
+
+function IBRaidLoot:FindLootCandidateIndexForPlayer(player)
+	for i = 1, 40 do
+		local candidate = GetMasterLootCandidate(i)
+		if candidate == player then
+			return i
+		end
+	end
+	return false
+end
+
+function IBRaidLoot:GiveMasterLootItem(player, lootObj)
+	local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
+	if not lootSlotIndex then
+		return "Loot window has to be open."
+	end
+
+	local candidateIndex = self:FindLootCandidateIndexForPlayer(player)
+	if not lootSlotIndex then
+		return player.." is not eligible for this item."
+	end
+
+	GiveMasterLoot(lootSlotIndex, candidateIndex)
+end
+
 function IBRaidLoot:IsMasterLooter_Real()
 	if not IsInRaid() then
 		return false
@@ -437,95 +486,10 @@ function IBRaidLoot:sizeof(tbl)
 	return count
 end
 
-function IBRaidLoot:SetupWindowFrame(frame, titleText)
-	local titlebg = frame:CreateTexture(nil, "BACKGROUND")
-	titlebg:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Title-Background]])
-	titlebg:SetPoint("TOPLEFT", 9, -6)
-	titlebg:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -28, -24)
-	
-	local dialogbg = frame:CreateTexture(nil, "BACKGROUND")
-	dialogbg:SetTexture([[Interface\Tooltips\UI-Tooltip-Background]])
-	dialogbg:SetPoint("TOPLEFT", 8, -24)
-	dialogbg:SetPoint("BOTTOMRIGHT", -6, 8)
-	dialogbg:SetVertexColor(0, 0, 0, .75)
-	
-	local topleft = frame:CreateTexture(nil, "BORDER")
-	topleft:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	topleft:SetWidth(64)
-	topleft:SetHeight(64)
-	topleft:SetPoint("TOPLEFT")
-	topleft:SetTexCoord(0.501953125, 0.625, 0, 1)
-	
-	local topright = frame:CreateTexture(nil, "BORDER")
-	topright:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	topright:SetWidth(64)
-	topright:SetHeight(64)
-	topright:SetPoint("TOPRIGHT")
-	topright:SetTexCoord(0.625, 0.75, 0, 1)
-	
-	local top = frame:CreateTexture(nil, "BORDER")
-	top:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	top:SetHeight(64)
-	top:SetPoint("TOPLEFT", topleft, "TOPRIGHT")
-	top:SetPoint("TOPRIGHT", topright, "TOPLEFT")
-	top:SetTexCoord(0.25, 0.369140625, 0, 1)
-	
-	local bottomleft = frame:CreateTexture(nil, "BORDER")
-	bottomleft:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	bottomleft:SetWidth(64)
-	bottomleft:SetHeight(64)
-	bottomleft:SetPoint("BOTTOMLEFT")
-	bottomleft:SetTexCoord(0.751953125, 0.875, 0, 1)
-	
-	local bottomright = frame:CreateTexture(nil, "BORDER")
-	bottomright:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	bottomright:SetWidth(64)
-	bottomright:SetHeight(64)
-	bottomright:SetPoint("BOTTOMRIGHT")
-	bottomright:SetTexCoord(0.875, 1, 0, 1)
-	
-	local bottom = frame:CreateTexture(nil, "BORDER")
-	bottom:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	bottom:SetHeight(64)
-	bottom:SetPoint("BOTTOMLEFT", bottomleft, "BOTTOMRIGHT")
-	bottom:SetPoint("BOTTOMRIGHT", bottomright, "BOTTOMLEFT")
-	bottom:SetTexCoord(0.376953125, 0.498046875, 0, 1)
-	
-	local left = frame:CreateTexture(nil, "BORDER")
-	left:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	left:SetWidth(64)
-	left:SetPoint("TOPLEFT", topleft, "BOTTOMLEFT")
-	left:SetPoint("BOTTOMLEFT", bottomleft, "TOPLEFT")
-	left:SetTexCoord(0.001953125, 0.125, 0, 1)
-	
-	local right = frame:CreateTexture(nil, "BORDER")
-	right:SetTexture([[Interface\PaperDollInfoFrame\UI-GearManager-Border]])
-	right:SetWidth(64)
-	right:SetPoint("TOPRIGHT", topright, "BOTTOMRIGHT")
-	right:SetPoint("BOTTOMRIGHT", bottomright, "TOPRIGHT")
-	right:SetTexCoord(0.1171875, 0.2421875, 0, 1)
-
-	local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-	close:SetPoint("TOPRIGHT", 2, 1)
-	close:SetScript("OnClick", function(self)
-		PlaySound("gsTitleOptionExit")
-		frame:Hide()
-	end)
-	
-	local titletext = frame:CreateFontString(nil, "ARTWORK")
-	titletext:SetFontObject(GameFontNormal)
-	titletext:SetPoint("TOPLEFT", 12, -8)
-	titletext:SetPoint("TOPRIGHT", -32, -8)
-	titletext:SetText(titleText)
-	
-	local title = CreateFrame("Button", nil, frame)
-	title:SetPoint("TOPLEFT", titlebg)
-	title:SetPoint("BOTTOMRIGHT", titlebg)
-	title:EnableMouse()
-	title:SetScript("OnMouseDown", function(self)
-		self:GetParent():StartMoving()
-	end)
-	title:SetScript("OnMouseUp", function(self)
-		self:GetParent():StopMovingOrSizing()
-	end)
+function IBRaidLoot:SetupWindowFrame(frame)
+	lwin.RegisterConfig(frame, self.db.profile, {
+		prefix = frame:GetName().."_"
+	})
+	lwin.RestorePosition(frame)
+	lwin.MakeDraggable(frame)
 end

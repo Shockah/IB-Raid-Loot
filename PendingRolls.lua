@@ -1,54 +1,44 @@
 local Frame = nil
 local ItemsFrame = nil
-local ItemFrames = 0
 
 local currentLootIDs = IBRaidLootData["currentLootIDs"]
 local currentLoot = IBRaidLootData["currentLoot"]
-local RollTypes = IBRaidLootData["RollTypes"]
-local RollTypeList = IBRaidLootData["RollTypeList"]
+local RollTypes = IBRaidLootSettings["RollTypes"]
+local RollTypeList = IBRaidLootSettings["RollTypeList"]
 
 function IBRaidLoot:CreatePendingRollsFrame()
 	if Frame ~= nil then
-		self:UpdatePendingRollsFrame()
 		Frame:Show()
+		self:UpdatePendingRollsFrame()
 		return Frame
 	end
 
-	Frame = CreateFrame("Frame", "IBRaidLoot_PendingRollsFrame", UIParent)
-	Frame:SetMovable(true)
-	Frame:SetUserPlaced(true)
+	Frame = CreateFrame("Frame", "IBRaidLoot_PendingRollsFrame", UIParent, "BasicFrameTemplateWithInset")
 	Frame:SetFrameStrata("HIGH")
-	Frame:SetWidth(600)
-	Frame:SetHeight(400)
+	Frame:SetSize(600, 400)
 	Frame:SetPoint("CENTER", 0, 0)
-	Frame:SetBackdrop({
-		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-		tile = true, tileSize = 32, edgeSize = 32,
-		insets = { left = 8, right = 8, top = 8, bottom = 8 }
-	})
-	Frame:SetBackdropColor(0, 0, 0, 1)
-	Frame:Show()
+	Frame:EnableMouse(true)
+	Frame:SetMovable(true)
+
 	table.insert(UISpecialFrames, "IBRaidLoot_PendingRollsFrame")
+	self:SetupWindowFrame(Frame)
 
-	self:SetupWindowFrame(Frame, "Pending Rolls")
+	local fTitle = Frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	fTitle:SetPoint("TOP", 0, -6)
+	fTitle:SetText("Pending Rolls")
+	fTitle:SetJustifyV("TOP")
+	Frame.title = fTitle
 
-	local fScroll = CreateFrame("ScrollFrame", "IBRaidLoot_PendingRollsScrollFrame", Frame, "UIPanelScrollFrameTemplate")
-	fScroll:SetWidth(fScroll:GetParent():GetWidth() - 24 - 24)
-	fScroll:SetHeight(fScroll:GetParent():GetHeight() - 36)
-	fScroll:SetPoint("TOPLEFT", 12, -24)
-	fScroll:Show()
+	local fScroll = CreateFrame("ScrollFrame", nil, Frame, "UIPanelScrollFrameTemplate")
+	fScroll:SetPoint("TOPLEFT", 6, -24 - 6)
+	fScroll:SetSize(Frame:GetWidth() - 24 - 12, Frame:GetHeight() - 24 - 12)
 
-	ItemsFrame = CreateFrame("Frame", "IBRaidLoot_PendingRollsContentFrame", nil, nil);
+	ItemsFrame = CreateFrame("Frame", nil, nil, nil);
 	ItemsFrame:SetWidth(fScroll:GetWidth())
-	ItemsFrame:SetHeight(60)
-	ItemsFrame:SetBackdrop({
-		bgFile = "",
-		edgeFile = "",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = {left = 1, right = 1, top = 1, bottom = 1}
-	})
+	ItemsFrame:SetPoint("TOPLEFT", 0, 0)
 	fScroll:SetScrollChild(ItemsFrame)
+	ItemsFrame.subframeCount = 0
+	ItemsFrame.subframes = {}
 	ItemsFrame:Show()
 
 	self:CreatePendingRollsItemFrames()
@@ -70,55 +60,64 @@ function IBRaidLoot:CreatePendingRollsItemFrames(closeIfNoItems)
 end
 
 function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
-	local i = ItemFrames + 1
-	local f = _G["IBRaidLoot_PendingRollsItemFrame"..i]
-	local fIcon = nil
-	local fName = nil
+	local i = ItemsFrame.subframeCount + 1
+	local f = ItemsFrame.subframes[i]
 
-	ItemFrames = ItemFrames + 1
+	local HEIGHT = 60
+	local BORDER_FIX = 4
+	local PADDING = 6 + BORDER_FIX
+	local CHILD_MARGIN = 6
+	local BUTTON_SIZE = 32
+	local BUTTON_MARGIN = 4
+	local ROLL_INFO_ICON_SIZE = 12
+	local ROLL_INFO_TEXT_SIZE = 18
+	local ROLL_INFO_ICON_TEXT_MARGIN = 2
+	local ROLL_INFO_MARGIN = 4
+
+	ItemsFrame.subframeCount = ItemsFrame.subframeCount + 1
 	if f == nil then
-		f = CreateFrame("Frame", "IBRaidLoot_PendingRollsItemFrame"..i, ItemsFrame, nil)
-		f:SetWidth(ItemsFrame:GetWidth())
-		f:SetHeight(60)
-		f:SetPoint("TOPLEFT", 0, -60 * (i - 1))
+		f = CreateFrame("Frame", nil, ItemsFrame)
+		ItemsFrame.subframes[i] = f
+		f:SetWidth(ItemsFrame:GetWidth() + BORDER_FIX * 2)
+		f:SetHeight(HEIGHT + BORDER_FIX * 2)
+		f:SetPoint("TOPLEFT", -BORDER_FIX, -HEIGHT * (i - 1) + BORDER_FIX)
 		f:SetBackdrop({
 			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
 			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
 			tile = true, tileSize = 16, edgeSize = 16,
-			insets = {left = 1, right = 1, top = 1, bottom = 1}
+			insets = {left = BORDER_FIX, right = BORDER_FIX, top = BORDER_FIX, bottom = BORDER_FIX}
 		})
 
-		local EDGE_MARGIN = 6
-		local BUTTON_MARGIN = 6
+		fInner = CreateFrame("Frame", nil, f)
+		fInner:SetWidth(f:GetWidth() - PADDING * 2)
+		fInner:SetHeight(f:GetHeight() - PADDING * 2)
+		fInner:SetPoint("CENTER", 0, 0)
+		local availableWidth = fInner:GetWidth()
 
-		fIcon = CreateFrame("Button", "IBRaidLoot_PendingRollsItemIcon"..i, f, "ItemButtonTemplate")
+		fIcon = CreateFrame("Button", nil, fInner, "ItemButtonTemplate")
+		fIcon:SetSize(32, 32)
 		fIcon:SetScale(1 / 32 * 40)
-		fIcon:SetPoint("TOPLEFT", EDGE_MARGIN, -EDGE_MARGIN)
+		fIcon:SetPoint("LEFT", 2, 0)
 		fIcon:SetScript("OnLeave", function(self)
 			GameTooltip:Hide()
 		end)
-		fIcon:RegisterForClicks("RightButtonDown")
+		f.icon = fIcon
+		availableWidth = availableWidth - fIcon:GetWidth() * fIcon:GetScale() - CHILD_MARGIN - 2
 
-		local buttonCount = self:GetRollTypeButtonCount()
-
-		local ICON_NAME_OFFSET = 8
-		local NAME_BUTTONS_OFFSET = 16
-		local BUTTON_SIZE = 32
-
-		local maxOffX = 0
+		local rollButtonCount = self:GetRollTypeButtonCount()
 		local xx = 0
-		local baseX = -EDGE_MARGIN
-		table.foreach(RollTypeList, function(_, obj)
+		f.rollButtons = {}
+		for _, obj in pairs(RollTypeList) do
 			if obj["button"] then
-				local fButton = CreateFrame("Button", "IBRaidLoot_PendingRollsItemButton_"..obj["type"]..i, f, nil)
-				fButton:SetWidth(BUTTON_SIZE)
-				fButton:SetHeight(BUTTON_SIZE)
-				local offX = baseX - (buttonCount - xx - 1) * (BUTTON_SIZE + BUTTON_MARGIN) - BUTTON_MARGIN
-				if offX < maxOffX then
-					maxOffX = offX
-				end
-				fButton:SetPoint("RIGHT", offX, 0)
+				local fButton = CreateFrame("Button", nil, fInner)
+				fButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
+				fButton:SetPoint("RIGHT", -(rollButtonCount - xx - 1) * (BUTTON_SIZE + BUTTON_MARGIN) + BUTTON_MARGIN - CHILD_MARGIN, 0)
 				fButton.isMouseDown = false
+				table.insert(f.rollButtons, fButton)
+				if xx ~= 0 then
+					availableWidth = availableWidth - BUTTON_MARGIN
+				end
+				availableWidth = availableWidth - fButton:GetWidth()
 
 				local fButtonIcon = fButton:CreateTexture(nil, "ARTWORK")
 				fButtonIcon:SetAllPoints(true)
@@ -127,52 +126,46 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 
 				xx = xx + 1
 			end
-		end)
-		local buttonsWidth = -maxOffX + BUTTON_SIZE
+		end
 
-		fName = f:CreateFontString("IBRaidLoot_PendingRollsItemName"..i, "ARTWORK", "GameFontNormal")
-		fName:SetPoint("TOPLEFT", fIcon, "TOPRIGHT", ICON_NAME_OFFSET, -EDGE_MARGIN - 2)
-		fName:SetWidth(f:GetWidth() - EDGE_MARGIN * 2 - fIcon:GetWidth() - ICON_NAME_OFFSET - NAME_BUTTONS_OFFSET - buttonsWidth)
+		fName = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		fName:SetPoint("LEFT", fIcon, "RIGHT", CHILD_MARGIN, 8)
+		fName:SetWidth(availableWidth)
 		fName:SetJustifyH("LEFT")
-
-		local ROLL_SIZE = 12
-		local ROLL_ICON_TEXT_MARGIN = 2
-		local ROLL_TEXT_SIZE = 18
-		local ROLL_MARGIN = 4
+		f.name = fName
 
 		xx = 0
-		baseX = ICON_NAME_OFFSET
-		table.foreach(RollTypeList, function(_, obj)
-			local fRolls = CreateFrame("Button", "IBRaidLoot_PendingRollsItemRolls"..obj["type"]..i, f, nil)
-			fRolls:SetWidth(ROLL_SIZE + ROLL_ICON_TEXT_MARGIN + ROLL_TEXT_SIZE)
-			fRolls:SetHeight(ROLL_SIZE)
-			fRolls:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", baseX + xx * (ROLL_SIZE + ROLL_ICON_TEXT_MARGIN + ROLL_TEXT_SIZE + ROLL_MARGIN), EDGE_MARGIN + 2)
-			fRolls:SetScript("OnLeave", function(self)
+		f.rollInfos = {}
+		local w = ROLL_INFO_ICON_SIZE + ROLL_INFO_ICON_TEXT_MARGIN + ROLL_INFO_TEXT_SIZE
+		for _, obj in pairs(RollTypeList) do
+			local fRollInfo = CreateFrame("Frame", nil, fInner)
+			fRollInfo:SetWidth(w)
+			fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
+			fRollInfo:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", CHILD_MARGIN + xx * (w + ROLL_INFO_MARGIN), 4)
+			fRollInfo:SetScript("OnLeave", function(self)
 				GameTooltip:Hide()
 			end)
+			table.insert(f.rollInfos, fRollInfo)
 
-			local fRollsIcon = fRolls:CreateTexture(nil, "ARTWORK")
-			fRollsIcon:SetWidth(ROLL_SIZE)
-			fRollsIcon:SetHeight(ROLL_SIZE)
-			fRollsIcon:SetPoint("LEFT", 0, 0)
-			fRollsIcon:SetTexture(obj["textureUp"])
-			fRolls.icon = fRollsIcon
+			local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
+			fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
+			fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
+			fRollInfoIcon:SetTexture(obj["textureUp"])
+			fRollInfo.icon = fRollInfoIcon
 
-			local fRollsText = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-			fRollsText:SetPoint("LEFT", fRollsIcon, "RIGHT", ROLL_ICON_TEXT_MARGIN, 0)
-			fRollsText:SetWidth(ROLL_TEXT_SIZE)
-			fRollsText:SetJustifyH("LEFT")
-			fRolls.text = fRollsText
+			local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+			fRollInfoText:SetWidth(ROLL_INFO_TEXT_SIZE)
+			fRollInfoText:SetHeight(ROLL_INFO_ICON_SIZE)
+			fRollInfoText:SetPoint("LEFT", fRollInfoIcon, "RIGHT", ROLL_INFO_ICON_TEXT_MARGIN, 0)
+			fRollInfoText:SetJustifyH("LEFT")
+			fRollInfo.text = fRollInfoText
 
 			xx = xx + 1
-		end)
-	else
-		fIcon = _G["IBRaidLoot_PendingRollsItemIcon"..i]
-		fName = _G["IBRaidLoot_PendingRollsItemName"..i]
+		end
 	end
 
-	fIcon.icon:SetTexture(lootObj["texture"])
-	fIcon:SetScript("OnEnter", function(self)
+	f.icon.icon:SetTexture(lootObj["texture"])
+	f.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
 	end)
@@ -181,16 +174,16 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 			DressUpItemLink(lootObj["link"])
 		end
 	end)]]--
-	fIcon:Show()
 
 	local r, g, b = GetItemQualityColor(lootObj["quality"])
-	fName:SetText(lootObj["name"])
-	fName:SetTextColor(r, g, b, 1)
-	fName:Show()
+	f.name:SetText(lootObj["name"])
+	f.name:SetTextColor(r, g, b, 1)
 
-	table.foreach(RollTypeList, function(_, obj)
+	local index = 0
+	for _, obj in pairs(RollTypeList) do
 		if obj["button"] then
-			local fButton = _G["IBRaidLoot_PendingRollsItemButton_"..obj["type"]..i]
+			index = index + 1
+			local fButton = f.rollButtons[index]
 			fButton:SetScript("OnEnter", function(self)
 				if not self.isMouseDown then
 					self.icon:SetTexture(obj["textureHighlight"])
@@ -237,18 +230,19 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				IBRaidLoot:UpdatePendingRollsFrame(true)
 				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
 			end)
-			fButton:Show()
 		end
-	end)
+	end
 
-	table.foreach(RollTypeList, function(_, obj)
-		local fRolls = _G["IBRaidLoot_PendingRollsItemRolls"..obj["type"]..i]
+	index = 0
+	for _, obj in pairs(RollTypeList) do
+		index = index + 1
+		local fRollInfo = f.rollInfos[index]
 		local rolls = self:GetRollsOfType(lootObj, obj["type"])
 		table.sort(rolls, function(a, b)
 			return IBRaidLoot:RollSortComparison(a, b)
 		end)
-		fRolls.text:SetText(#rolls)
-		fRolls:SetScript("OnEnter", function(self)
+		fRollInfo.text:SetText(#rolls)
+		fRollInfo:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 			GameTooltip:ClearLines()
 			table.foreach(rolls, function(_, rollObj)
@@ -260,23 +254,19 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 			end)
 			GameTooltip:Show()
 		end)
-		fRolls:Show()
-	end)
+	end
 
-	ItemsFrame:SetHeight(60 * i)
 	f:Show()
+	ItemsFrame:SetHeight(HEIGHT * i)
 	
 	return f
 end
 
 function IBRaidLoot:ClearPendingRollsItemFrames()
-	for i = 1, ItemFrames do
-		local f = _G["IBRaidLoot_PendingRollsItemFrame"..i]
-		if f ~= nil then
-			f:Hide()
-		end
+	for _, frame in pairs(ItemsFrame.subframes) do
+		frame:Hide()
 	end
-	ItemFrames = 0
+	ItemsFrame.subframeCount = 0
 end
 
 function IBRaidLoot:UpdatePendingRollsFrame(closeIfNoItems)
