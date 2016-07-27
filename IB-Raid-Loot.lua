@@ -7,6 +7,7 @@ end
 IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
 IBRaidLootSettings["DEBUG_MODE"] = true
+IBRaidLootSettings["ROLL_TIMEOUT"] = 90 --seconds
 IBRaidLootSettings["RollTypes"] = {}
 IBRaidLootSettings["RollTypeList"] = {}
 
@@ -180,6 +181,7 @@ function IBRaidLoot:OnLootOpened()
 					lootObj["quality"] = quality
 					lootObj["texture"] = texture
 					lootObj["name"] = item
+					lootObj["timeout"] = IBRaidLootSettings["ROLL_TIMEOUT"]
 					lootObj["uniqueLootID"] = uniqueLootID
 
 					local rolls = {}
@@ -202,9 +204,27 @@ function IBRaidLoot:OnLootOpened()
 	end
 
 	if next(newLoot) ~= nil then
+		self:CommMessage("RollsRequest", newLoot, "RAID")
+		for _, lootObj in pairs(newLoot) do
+			lootObj["timeoutStart"] = GetTime()
+			lootObj["timeoutEnd"] = lootObj["timeoutStart"] + lootObj["timeout"]
+			self:ScheduleTimer(function()
+				local updated = false
+				for player, rollObj in pairs(lootObj["rolls"]) do
+					if rollObj["type"] == "Pending" then
+						rollObj["type"] = "Pass"
+						IBRaidLoot:CommMessage("RollResponse", rollObj, "RAID")
+						updated = true
+					end
+				end
+				if updated then
+					IBRaidLoot:UpdatePendingRollsFrame(true)
+					IBRaidLoot:UpdateRollSummaryFrame()
+				end
+			end, lootObj["timeout"])
+		end
 		self:CreatePendingRollsFrame()
 		self:UpdateRollSummaryFrame()
-		self:CommMessage("RollsRequest", newLoot, "RAID")
 	end
 end
 
@@ -213,6 +233,9 @@ end
 
 function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
 	local one = libCE:Decode(data)
+	if not string.find(sender, "-") then
+		sender = sender.."-"..GetRealmName()
+	end
 
 	local two, message = libC:Decompress(one)
 	if not two then
@@ -226,7 +249,7 @@ function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
 		return
 	end
 
-	if sender == GetUnitName("player") then
+	if sender == GetUnitName("player", true) then
 		return
 	end
 	self:OnCommMessage(final["Type"], final["Body"], distribution, sender)
@@ -239,6 +262,8 @@ function IBRaidLoot:OnCommMessage(type, obj, distribution, sender)
 			if currentLoot[uniqueLootID] == nil then
 				table.insert(currentLootIDs, uniqueLootID)
 				currentLoot[uniqueLootID] = lootObj
+				lootObj["timeoutStart"] = GetTime()
+				lootObj["timeoutEnd"] = lootObj["timeoutStart"] + lootObj["timeout"]
 			end
 		end
 
@@ -313,6 +338,9 @@ function IBRaidLoot:GetLootEligiblePlayers(lootObj, player)
 	for i = 1, 40 do
 		local player = GetMasterLootCandidate(i)
 		if player ~= nil then
+			if not string.find(player, "-") then
+				player = player.."-"..GetRealmName()
+			end
 			table.insert(players, player)
 		end
 	end
@@ -342,25 +370,35 @@ end
 function IBRaidLoot:FindLootCandidateIndexForPlayer(player)
 	for i = 1, 40 do
 		local candidate = GetMasterLootCandidate(i)
-		if candidate == player then
-			return i
+		if candidate ~= nil then
+			if not string.find(candidate, "-") then
+				candidate = candidate.."-"..GetRealmName()
+				if candidate == player then
+					return i
+				end
+			end
 		end
 	end
 	return false
 end
 
 function IBRaidLoot:GiveMasterLootItem(player, lootObj)
-	local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
-	if not lootSlotIndex then
-		return "Loot window has to be open."
-	end
+	if self:IsMasterLooter_Real() then
+		local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
+		if not lootSlotIndex then
+			return "Loot window has to be open."
+		end
 
-	local candidateIndex = self:FindLootCandidateIndexForPlayer(player)
-	if not lootSlotIndex then
-		return player.." is not eligible for this item."
-	end
+		local candidateIndex = self:FindLootCandidateIndexForPlayer(player)
+		if not lootSlotIndex then
+			return player.." is not eligible for this item."
+		end
 
-	GiveMasterLoot(lootSlotIndex, candidateIndex)
+		GiveMasterLoot(lootSlotIndex, candidateIndex)
+	end
+	
+	lootObj["player"] = player
+	self:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
 end
 
 function IBRaidLoot:IsMasterLooter_Real()
@@ -373,7 +411,7 @@ function IBRaidLoot:IsMasterLooter_Real()
 end
 
 function IBRaidLoot:DidRollOnItem(lootObj)
-	local rollObj = lootObj["rolls"][GetUnitName("player")]
+	local rollObj = lootObj["rolls"][GetUnitName("player", true)]
 	if rollObj == nil then
 		return false
 	end

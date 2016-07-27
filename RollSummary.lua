@@ -47,8 +47,6 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	LinesFrame:Show()
 
 	local fIcon = CreateFrame("Button", nil, fContent, "ItemButtonTemplate")
-	fIcon:SetSize(32, 32)
-	fIcon.icon:SetSize(32, 32)
 	fIcon:SetPoint("TOPLEFT", 0, 0)
 	fIcon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
@@ -58,7 +56,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 
 	local fName = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	fName:SetPoint("LEFT", fIcon, "RIGHT", 6, 0)
-	fName:SetWidth(fContent:GetWidth() - 32 - 12 - 24 * 2 - 48 - 4)
+	fName:SetWidth(fContent:GetWidth() - fIcon:GetWidth() - 12 - 24 * 2 - 48 - 4)
 	fName:SetJustifyH("LEFT")
 	Frame.name = fName
 
@@ -109,7 +107,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 		button1 = ACCEPT,
 		button2 = CANCEL,
 		OnAccept = function(self, data)
-			self:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
+			IBRaidLoot:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
 		end,
 		OnCancel = function(_, reason)
 		end,
@@ -186,15 +184,24 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f:SetHeight(HEIGHT)
 		f:SetPoint("TOPLEFT", 0, -HEIGHT * (i - 1))
 
+		local fHighlight = f:CreateTexture(nil, "BACKGROUND")
+		fHighlight:SetAllPoints(true)
+		f.highlight = fHighlight
+
 		local fPlayerText = f:CreateFontString(nil, "ARTWORK", "GameFontWhiteSmall")
 		fPlayerText:SetPoint("TOPLEFT", 0, 0)
 		fPlayerText:SetSize(170, 15)
 		fPlayerText:SetJustifyH("LEFT")
 		f.playerText = fPlayerText
 
+		local fRollTypeIcon = f:CreateTexture(nil, "ARTWORK")
+		fRollTypeIcon:SetSize(12, 12)
+		fRollTypeIcon:SetPoint("LEFT", fPlayerText, "RIGHT", 0, 0)
+		f.rollTypeIcon = fRollTypeIcon
+
 		local fRollTypeText = f:CreateFontString(nil, "ARTWORK", "GameFontWhiteSmall")
-		fRollTypeText:SetPoint("LEFT", fPlayerText, "RIGHT", 0, 0)
-		fRollTypeText:SetSize(100, 15)
+		fRollTypeText:SetPoint("LEFT", fRollTypeIcon, "RIGHT", 0, 0)
+		fRollTypeText:SetSize(100 - 12, 15)
 		fRollTypeText:SetJustifyH("LEFT")
 		f.rollTypeText = fRollTypeText
 
@@ -205,25 +212,49 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f.rollValueText = fRollValueText
 	end
 
-	f.playerText:SetText(rollObj["player"])
+	if lootObj["player"] then
+		if rollObj["player"] == lootObj["player"] then
+			f.highlight:SetColorTexture(0, 1, 0, 0.35)
+		else
+			f.highlight:SetColorTexture(1, 1, 1, 0.2)
+		end
+
+		f:SetScript("OnEnter", nil)
+		f:SetScript("OnLeave", nil)
+		f.highlight:Show()
+
+		f:SetScript("OnClick", nil)
+	else
+		f.highlight:SetColorTexture(1, 1, 0, 0.35)
+		f.highlight:Hide()
+		f:SetScript("OnEnter", function(self)
+			self.highlight:Show()
+		end)
+		f:SetScript("OnLeave", function(self)
+			self.highlight:Hide()
+		end)
+
+		f:SetScript("OnClick", function(self, button)
+			if IBRaidLoot:IsMasterLooter() then
+				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", rollObj["player"])
+				if dialog then
+					local data = {}
+					data["rollObj"] = rollObj
+					data["lootObj"] = lootObj
+					dialog.data = data
+				end
+			end
+		end)
+	end
+
+	f.playerText:SetText(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+	f.rollTypeIcon:SetTexture(RollTypes[rollObj["type"]]["textureUp"])
 	f.rollTypeText:SetText(rollObj["type"])
 	if RollTypes[rollObj["type"]]["shouldRoll"] then
 		f.rollValueText:SetText(rollObj["value"])
 	else
 		f.rollValueText:SetText("")
 	end
-
-	f:SetScript("OnClick", function(self, button)
-		if IBRaidLoot:IsMasterLooter() then
-			local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", rollObj["player"])
-			if dialog then
-				local data = {}
-				data["rollObj"] = rollObj
-				data["lootObj"] = lootObj
-				dialog.data = data
-			end
-		end
-	end)
 
 	LinesFrame:SetHeight(HEIGHT * i)
 	f:Show()

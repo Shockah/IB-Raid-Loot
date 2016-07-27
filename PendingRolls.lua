@@ -94,9 +94,13 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		fInner:SetPoint("CENTER", 0, 0)
 		local availableWidth = fInner:GetWidth()
 
+		local fHighlight = fInner:CreateTexture(nil, "BACKGROUND")
+		fHighlight:SetSize(fInner:GetWidth(), fInner:GetHeight())
+		fHighlight:SetPoint("TOPLEFT", 0, 0)
+		fHighlight:SetColorTexture(1, 1, 1, 0.15)
+		f.highlight = fHighlight
+
 		fIcon = CreateFrame("Button", nil, fInner, "ItemButtonTemplate")
-		fIcon:SetSize(32, 32)
-		fIcon:SetScale(1 / 32 * 40)
 		fIcon:SetPoint("LEFT", 2, 0)
 		fIcon:SetScript("OnLeave", function(self)
 			GameTooltip:Hide()
@@ -164,6 +168,24 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		end
 	end
 
+	if GetTime() < lootObj["timeoutEnd"] then
+		f:SetScript("OnUpdate", function(self, elapsed)
+			local time = GetTime()
+			local timeMin = lootObj["timeoutStart"]
+			local timeMax = lootObj["timeoutEnd"]
+			local v = (time - timeMin) / (timeMax - timeMin)
+			v = math.min(math.max(v, 0), 1)
+			local v2 = 1 - v
+
+			self.highlight:SetWidth(self:GetParent():GetWidth() * v2)
+			if v == 1 then
+				self:SetScript("OnUpdate", nil)
+			end
+		end)
+	else
+		f:SetScript("OnUpdate", nil)
+	end
+
 	f.icon.icon:SetTexture(lootObj["texture"])
 	f.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
@@ -222,9 +244,9 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 					IBRaidLoot:CommMessage("Roll", rollObj, "RAID")
 				end
 				
-				rollObj["player"] = GetUnitName("player")
+				rollObj["player"] = GetUnitName("player", true)
 				lootObj["rolls"][rollObj["player"]] = rollObj
-				if ItemFrames == 1 then
+				if ItemsFrame.subframeCount == 1 then
 					IBRaidLoot:CreateRollSummaryFrame()
 				end
 				IBRaidLoot:UpdatePendingRollsFrame(true)
@@ -245,11 +267,12 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		fRollInfo:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 			GameTooltip:ClearLines()
+			GameTooltip:AddLine(obj["type"])
 			table.foreach(rolls, function(_, rollObj)
 				if RollTypes[rollObj["type"]]["shouldRoll"] then
-					GameTooltip:AddDoubleLine(rollObj["player"], rollObj["value"])
+					GameTooltip:AddDoubleLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""), rollObj["value"])
 				else
-					GameTooltip:AddLine(rollObj["player"])
+					GameTooltip:AddLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
 				end
 			end)
 			GameTooltip:Show()
