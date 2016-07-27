@@ -12,3 +12,4 @@ embeds.xml
 # Load Main Libraries
 IB-Raid-Loot.lua
 PendingRolls.lua
+RollSummary.lua

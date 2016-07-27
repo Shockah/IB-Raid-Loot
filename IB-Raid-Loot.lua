@@ -1,4 +1,7 @@
 IBRaidLoot = LibStub("AceAddon-3.0"):NewAddon("IBRaidLoot", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceBucket-3.0", "AceTimer-3.0")
+if not IBRaidLootDB then
+	IBRaidLootDB = {}
+end
 
 IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
@@ -42,9 +45,9 @@ table.insert(RollTypeList, RollType)
 RollType = {}
 RollType["order"] = 2
 RollType["button"] = true
-RollType["textureUp"] = [[Interface\Buttons\UI-GroupLoot-Dice-Up]]
-RollType["textureDown"] = [[Interface\Buttons\UI-GroupLoot-Dice-Down]]
-RollType["textureHighlight"] = [[Interface\Buttons\UI-GroupLoot-Dice-Highlight]]
+RollType["textureUp"] = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Offspec-Up]]
+RollType["textureDown"] = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Offspec-Down]]
+RollType["textureHighlight"] = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Offspec-Highlight]]
 RollType["shouldRoll"] = true
 RollType["type"] = "Off-spec"
 RollTypes[RollType["type"]] = RollType
@@ -88,6 +91,29 @@ local libS = LibStub:GetLibrary("AceSerializer-3.0")
 local libC = LibStub:GetLibrary("LibCompress")
 local libCE = libC:GetAddonEncodeTable()
 
+local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
+	type = "launcher",
+	text = "IB-Raid-Loot",
+	icon = [[Interface\Icons\inv_misc_dice_01]],
+	OnClick = function(self, button)
+		if button == "LeftButton" then
+			IBRaidLoot:CreatePendingRollsFrame()
+		elseif button == "RightButton" then
+			if next(currentLootIDs) ~= nil then
+				IBRaidLoot:CreateRollSummaryFrame()
+			end
+		end
+	end,
+	OnTooltipShow = function(tt)
+		tt:AddLine("IB-Raid-Loot")
+		tt:AddLine(" ")
+		tt:AddLine("LMB: Pending Rolls")
+		tt:AddLine("RMB: Roll Summary")
+	end
+})
+
+local icon = LibStub("LibDBIcon-1.0")
+
 -------
 -- event handlers
 -------
@@ -98,8 +124,18 @@ function IBRaidLoot:OnInitialize()
 
 	self:RegisterComm(AceCommPrefix)
 
-	self:RegisterChatCommand("ibrl", "OnSlashCommand");
-	self:RegisterChatCommand("ibloot", "OnSlashCommand");
+	self:RegisterChatCommand("ibrl", "OnSlashCommand")
+	self:RegisterChatCommand("ibloot", "OnSlashCommand")
+
+	self.db = LibStub("AceDB-3.0"):New("IBRaidLootDB", {
+		profile = {
+			minimap = {
+				hide = false
+			}
+		}
+	})
+
+	icon:Register("IB-Raid-Loot", LDB, self.db.profile.minimap)
 end
 
 function IBRaidLoot:OnDisable()
@@ -158,6 +194,7 @@ function IBRaidLoot:OnLootOpened()
 
 	if next(newLoot) ~= nil then
 		self:CreatePendingRollsFrame()
+		self:UpdateRollSummaryFrame()
 		self:CommMessage("RollsRequest", newLoot, "RAID")
 	end
 end
@@ -222,6 +259,7 @@ function IBRaidLoot:OnRollReceived(rollObj)
 
 	lootObj["rolls"][rollObj["player"]] = rollObj
 	self:UpdateLootFrame()
+	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
 end
 
 function IBRaidLoot:OnRollResponseReceived(rollObj)
@@ -234,6 +272,7 @@ function IBRaidLoot:OnRollResponseReceived(rollObj)
 
 	lootObj["rolls"][rollObj["player"]] = rollObj
 	self:UpdateLootFrame()
+	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
 end
 
 -------
@@ -313,6 +352,33 @@ function IBRaidLoot:GetRollsOfType(lootObj, type)
 	return rolls
 end
 
+function IBRaidLoot:GetSortedRolls(lootObj)
+	local rolls = {}
+	table.foreach(lootObj["rolls"], function(player, rollObj)
+		table.insert(rolls, rollObj)
+	end)
+	table.sort(rolls, RollSortComparison)
+	return rolls
+end
+
+function IBRaidLoot:RollSortComparison(a, b)
+	local aTypeObj = RollTypes[a["type"]]
+	local bTypeObj = RollTypes[b["type"]]
+	if aTypeObj["order"] ~= bTypeObj["order"] then
+		return aTypeObj["order"] < bTypeObj["order"]
+	else
+		if aTypeObj["shouldRoll"] then
+			if a["value"] ~= b["value"] then
+				return a["value"] > b["value"]
+			else
+				return a["player"] < b["player"]
+			end
+		else
+			return a["player"] < b["player"]
+		end
+	end
+end
+
 function IBRaidLoot:GetItemIDFromLink(link)
 	return string.gsub(link, ".-\124H([^\124]*)\124h.*", "%1")
 end
@@ -361,6 +427,14 @@ function IBRaidLoot:tprint(tbl, indent)
 			print(formatting..v)
 		end
 	end
+end
+
+function IBRaidLoot:sizeof(tbl)
+	local count = 0
+	table.foreach(tbl, function(_, _)
+		count = count + 1
+	end)
+	return count
 end
 
 function IBRaidLoot:SetupWindowFrame(frame, titleText)
@@ -435,7 +509,7 @@ function IBRaidLoot:SetupWindowFrame(frame, titleText)
 	close:SetPoint("TOPRIGHT", 2, 1)
 	close:SetScript("OnClick", function(self)
 		PlaySound("gsTitleOptionExit")
-		RollFrame:Hide()
+		frame:Hide()
 	end)
 	
 	local titletext = frame:CreateFontString(nil, "ARTWORK")

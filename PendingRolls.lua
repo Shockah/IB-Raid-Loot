@@ -15,6 +15,8 @@ function IBRaidLoot:CreatePendingRollsFrame()
 	end
 
 	Frame = CreateFrame("Frame", "IBRaidLoot_PendingRollsFrame", UIParent)
+	Frame:SetMovable(true)
+	Frame:SetUserPlaced(true)
 	Frame:SetFrameStrata("HIGH")
 	Frame:SetWidth(600)
 	Frame:SetHeight(400)
@@ -26,11 +28,10 @@ function IBRaidLoot:CreatePendingRollsFrame()
 		insets = { left = 8, right = 8, top = 8, bottom = 8 }
 	})
 	Frame:SetBackdropColor(0, 0, 0, 1)
-	Frame:SetMovable(true)
 	Frame:Show()
-	table.insert(UISpecialFrames, "IBRaidLootFrame")
+	table.insert(UISpecialFrames, "IBRaidLoot_PendingRollsFrame")
 
-	self:SetupWindowFrame(Frame, "IB Raid Loot - Pending Rolls")
+	self:SetupWindowFrame(Frame, "Pending Rolls")
 
 	local fScroll = CreateFrame("ScrollFrame", "IBRaidLoot_PendingRollsScrollFrame", Frame, "UIPanelScrollFrameTemplate")
 	fScroll:SetWidth(fScroll:GetParent():GetWidth() - 24 - 24)
@@ -91,10 +92,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		local BUTTON_MARGIN = 6
 
 		fIcon = CreateFrame("Button", "IBRaidLoot_PendingRollsItemIcon"..i, f, "ItemButtonTemplate")
-		fIcon:SetWidth(48)
-		fIcon:SetHeight(48)
-		fIcon.icon:SetWidth(48)
-		fIcon.icon:SetHeight(48)
+		fIcon:SetScale(1 / 32 * 40)
 		fIcon:SetPoint("TOPLEFT", EDGE_MARGIN, -EDGE_MARGIN)
 		fIcon:SetScript("OnLeave", function(self)
 			GameTooltip:Hide()
@@ -132,7 +130,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		end)
 		local buttonsWidth = -maxOffX + BUTTON_SIZE
 
-		fName = fIcon:CreateFontString("IBRaidLoot_PendingRollsItemName"..i, "ARTWORK", "GameFontNormal")
+		fName = f:CreateFontString("IBRaidLoot_PendingRollsItemName"..i, "ARTWORK", "GameFontNormal")
 		fName:SetPoint("TOPLEFT", fIcon, "TOPRIGHT", ICON_NAME_OFFSET, -EDGE_MARGIN - 2)
 		fName:SetWidth(f:GetWidth() - EDGE_MARGIN * 2 - fIcon:GetWidth() - ICON_NAME_OFFSET - NAME_BUTTONS_OFFSET - buttonsWidth)
 		fName:SetJustifyH("LEFT")
@@ -140,7 +138,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		local ROLL_SIZE = 12
 		local ROLL_ICON_TEXT_MARGIN = 2
 		local ROLL_TEXT_SIZE = 18
-		local ROLL_MARGIN = 6
+		local ROLL_MARGIN = 4
 
 		xx = 0
 		baseX = ICON_NAME_OFFSET
@@ -160,7 +158,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 			fRollsIcon:SetTexture(obj["textureUp"])
 			fRolls.icon = fRollsIcon
 
-			local fRollsText = fIcon:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+			local fRollsText = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 			fRollsText:SetPoint("LEFT", fRollsIcon, "RIGHT", ROLL_ICON_TEXT_MARGIN, 0)
 			fRollsText:SetWidth(ROLL_TEXT_SIZE)
 			fRollsText:SetJustifyH("LEFT")
@@ -233,7 +231,11 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				
 				rollObj["player"] = GetUnitName("player")
 				lootObj["rolls"][rollObj["player"]] = rollObj
+				if ItemFrames == 1 then
+					IBRaidLoot:CreateRollSummaryFrame()
+				end
 				IBRaidLoot:UpdatePendingRollsFrame(true)
+				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
 			end)
 			fButton:Show()
 		end
@@ -242,6 +244,9 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 	table.foreach(RollTypeList, function(_, obj)
 		local fRolls = _G["IBRaidLoot_PendingRollsItemRolls"..obj["type"]..i]
 		local rolls = self:GetRollsOfType(lootObj, obj["type"])
+		table.sort(rolls, function(a, b)
+			return IBRaidLoot:RollSortComparison(a, b)
+		end)
 		fRolls.text:SetText(#rolls)
 		fRolls:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT");
@@ -275,7 +280,7 @@ function IBRaidLoot:ClearPendingRollsItemFrames()
 end
 
 function IBRaidLoot:UpdatePendingRollsFrame(closeIfNoItems)
-	if ItemsFrame == nil then
+	if Frame == nil or not Frame:IsVisible() then
 		return
 	end
 	
