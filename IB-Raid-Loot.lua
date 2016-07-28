@@ -369,13 +369,14 @@ end
 function IBRaidLoot:OnRollsRequestReceived(obj, sender)
 	for _, lootObj in pairs(obj["loot"]) do
 		local uniqueLootID = lootObj["uniqueLootID"]
-		if currentLoot[uniqueLootID] == nil then
-			table.insert(currentLootIDs, uniqueLootID)
-			currentLoot[uniqueLootID] = lootObj
-			lootObj["players"] = {}
-			lootObj["timeoutStart"] = GetTime()
-			lootObj["timeoutEnd"] = lootObj["timeoutStart"] + obj["timeout"]
+		if currentLoot[uniqueLootID] then
+			self:RemoveLoot(uniqueLootID)
 		end
+		table.insert(currentLootIDs, uniqueLootID)
+		currentLoot[uniqueLootID] = lootObj
+		lootObj["players"] = {}
+		lootObj["timeoutStart"] = GetTime()
+		lootObj["timeoutEnd"] = lootObj["timeoutStart"] + obj["timeout"]
 	end
 
 	if not IBRaidLoot:DidRollOnAllItems() then
