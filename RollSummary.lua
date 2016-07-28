@@ -305,7 +305,7 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 	else
 		f:SetScript("OnClick", function(self, button)
 			if IBRaidLoot:IsMasterLooter() then
-				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", rollObj["player"])
+				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
 				if dialog then
 					local data = {}
 					data["rollObj"] = rollObj
