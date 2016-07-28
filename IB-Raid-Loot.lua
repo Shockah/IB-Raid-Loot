@@ -455,9 +455,9 @@ function IBRaidLoot:FindLootCandidateIndexForPlayer(slotIndex, player)
 		if candidate ~= nil then
 			if not string.find(candidate, "-") then
 				candidate = candidate.."-"..GetRealmName()
-				if candidate == player then
-					return i
-				end
+			end
+			if candidate == player then
+				return i
 			end
 		end
 	end
@@ -477,7 +477,7 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj, callback)
 		end
 
 		local candidateIndex = self:FindLootCandidateIndexForPlayer(lootSlotIndex, player)
-		if not lootSlotIndex then
+		if not candidateIndex then
 			callback(player.." is not eligible for this item.")
 			return
 		end
