@@ -151,31 +151,35 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f.rollInfos = {}
 		local w = ROLL_INFO_ICON_SIZE + ROLL_INFO_ICON_TEXT_MARGIN + ROLL_INFO_TEXT_SIZE
 		for _, obj in pairs(RollTypeList) do
-			local fRollInfo = CreateFrame("Frame", nil, fInner)
-			fRollInfo:SetWidth(w)
-			fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
-			fRollInfo:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", CHILD_MARGIN + xx * (w + ROLL_INFO_MARGIN), 4)
-			fRollInfo:SetScript("OnLeave", function(self)
-				GameTooltip:Hide()
-			end)
-			table.insert(f.rollInfos, fRollInfo)
+			if obj["order"] <= 100 then
+				local fRollInfo = CreateFrame("Frame", nil, fInner)
+				fRollInfo:SetWidth(w)
+				fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
+				fRollInfo:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", CHILD_MARGIN + xx * (w + ROLL_INFO_MARGIN), 4)
+				fRollInfo:SetScript("OnLeave", function(self)
+					GameTooltip:Hide()
+				end)
+				table.insert(f.rollInfos, fRollInfo)
 
-			local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
-			fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
-			fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
-			fRollInfoIcon:SetTexture(obj["textureUp"])
-			fRollInfo.icon = fRollInfoIcon
+				local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
+				fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
+				fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
+				fRollInfoIcon:SetTexture(obj["textureUp"])
+				fRollInfo.icon = fRollInfoIcon
 
-			local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-			fRollInfoText:SetWidth(ROLL_INFO_TEXT_SIZE)
-			fRollInfoText:SetHeight(ROLL_INFO_ICON_SIZE)
-			fRollInfoText:SetPoint("LEFT", fRollInfoIcon, "RIGHT", ROLL_INFO_ICON_TEXT_MARGIN, 0)
-			fRollInfoText:SetJustifyH("LEFT")
-			fRollInfo.text = fRollInfoText
+				local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+				fRollInfoText:SetWidth(ROLL_INFO_TEXT_SIZE)
+				fRollInfoText:SetHeight(ROLL_INFO_ICON_SIZE)
+				fRollInfoText:SetPoint("LEFT", fRollInfoIcon, "RIGHT", ROLL_INFO_ICON_TEXT_MARGIN, 0)
+				fRollInfoText:SetJustifyH("LEFT")
+				fRollInfo.text = fRollInfoText
 
-			xx = xx + 1
+				xx = xx + 1
+			end
 		end
 	end
+
+	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
 
 	if GetTime() < lootObj["timeoutEnd"] then
 		f:SetScript("OnUpdate", function(self, elapsed)
@@ -195,7 +199,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f:SetScript("OnUpdate", nil)
 	end
 
-	f.icon.icon:SetTexture(lootObj["texture"])
+	f.icon.icon:SetTexture(iTexture)
 	f.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
@@ -214,8 +218,8 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f.quantity:SetText(lootObj["quantity"])
 	end
 
-	local r, g, b = GetItemQualityColor(lootObj["quality"])
-	f.name:SetText(lootObj["name"])
+	local r, g, b = GetItemQualityColor(iQuality)
+	f.name:SetText(iName)
 	f.name:SetTextColor(r, g, b, 1)
 
 	local index = 0
@@ -247,26 +251,29 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				self.isMouseDown = false
 			end)
 			fButton:SetScript("OnClick", function(self)
-				local rollObj = {}
-				rollObj["uniqueLootID"] = lootObj["uniqueLootID"]
-				rollObj["type"] = obj["type"]
-				rollObj["value"] = 0
-
-				if IBRaidLoot:IsMasterLooter() then
-					if RollTypes[rollObj["type"]]["shouldRoll"] then
-						rollObj["value"] = random(100)
-					end
-					IBRaidLoot:CommMessage("RollResponse", rollObj, "RAID")
-				else
-					IBRaidLoot:CommMessage("Roll", rollObj, "RAID")
-				end
-
 				local player = GetUnitName("player", true)
 				if not string.find(player, "-") then
 					player = player.."-"..GetRealmName()
 				end
-				rollObj["player"] = player
-				lootObj["rolls"][rollObj["player"]] = rollObj
+
+				local rollObj = lootObj["rolls"][player]
+				rollObj["type"] = obj["type"]
+
+				local sendObj = {}
+				sendObj["uniqueLootID"] = lootObj["uniqueLootID"]
+				sendObj["type"] = rollObj["type"]
+
+				if IBRaidLoot:IsMasterLooter() then
+					if RollTypes[rollObj["type"]]["shouldRoll"] then
+						rollObj["value"] = random(100)
+						sendObj["value"] = rollObj["value"]
+						sendObj["player"] = player
+					end
+					IBRaidLoot:CommMessage("RollResponse", sendObj, "RAID")
+				else
+					IBRaidLoot:CommMessage("Roll", sendObj, "RAID")
+				end
+
 				if ItemsFrame.subframeCount == 1 then
 					IBRaidLoot:GoToFirstUnassigned()
 					IBRaidLoot:CreateRollSummaryFrame()
@@ -279,24 +286,26 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 
 	index = 0
 	for _, obj in pairs(RollTypeList) do
-		index = index + 1
-		local fRollInfo = f.rollInfos[index]
-		local rolls = self:GetRollsOfType(lootObj, obj["type"])
-		self:SortRolls(rolls)
-		fRollInfo.text:SetText(#rolls)
-		fRollInfo:SetScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_LEFT");
-			GameTooltip:ClearLines()
-			GameTooltip:AddLine(obj["type"])
-			table.foreach(rolls, function(_, rollObj)
-				if RollTypes[rollObj["type"]]["shouldRoll"] then
-					GameTooltip:AddDoubleLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""), rollObj["value"])
-				else
-					GameTooltip:AddLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+		if obj["order"] <= 100 then
+			index = index + 1
+			local fRollInfo = f.rollInfos[index]
+			local rolls = self:GetRollsOfType(lootObj, obj["type"])
+			self:SortRolls(rolls)
+			fRollInfo.text:SetText(#rolls)
+			fRollInfo:SetScript("OnEnter", function(self)
+				GameTooltip:SetOwner(self, "ANCHOR_LEFT");
+				GameTooltip:ClearLines()
+				GameTooltip:AddLine(obj["type"])
+				for _, rollObj in pairs(rolls) do
+					if RollTypes[rollObj["type"]]["shouldRoll"] then
+						GameTooltip:AddDoubleLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""), rollObj["value"])
+					else
+						GameTooltip:AddLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+					end
 				end
+				GameTooltip:Show()
 			end)
-			GameTooltip:Show()
-		end)
+		end
 	end
 
 	f:Show()
@@ -323,10 +332,10 @@ end
 
 function IBRaidLoot:GetRollTypeButtonCount()
 	local buttons = 0
-	table.foreach(RollTypeList, function(_, obj)
+	for _, obj in pairs(RollTypeList) do
 		if obj["button"] then
 			buttons = buttons + 1
 		end
-	end)
+	end
 	return buttons
 end

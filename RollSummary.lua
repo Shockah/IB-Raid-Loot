@@ -180,8 +180,9 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 	end
 
 	local lootObj = self:GetCurrentRollSummaryLoot()
+	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
 
-	Frame.icon.icon:SetTexture(lootObj["texture"])
+	Frame.icon.icon:SetTexture(iTexture)
 	Frame.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
@@ -204,8 +205,8 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 		end
 	end
 
-	local r, g, b = GetItemQualityColor(lootObj["quality"])
-	Frame.name:SetText(lootObj["name"])
+	local r, g, b = GetItemQualityColor(iQuality)
+	Frame.name:SetText(iName)
 	Frame.name:SetTextColor(r, g, b, 1)
 
 	Frame.indexText:SetText(currentIndex.." / "..self:sizeof(currentLootIDs))
@@ -240,9 +241,9 @@ end
 function IBRaidLoot:CreateRollSummaryRollFrames()
 	local lootObj = self:GetCurrentRollSummaryLoot()
 	local rolls = self:GetSortedRolls(lootObj)
-	table.foreach(rolls, function(_, rollObj)
-		IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
-	end)
+	for _, rollObj in pairs(rolls) do
+		self:CreateRollSummaryRollFrame(lootObj, rollObj)
+	end
 end
 
 function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
@@ -328,7 +329,11 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 	f.rollTypeIcon:SetTexture(RollTypes[rollObj["type"]]["textureUp"])
 	f.rollTypeText:SetText(rollObj["type"])
 	if RollTypes[rollObj["type"]]["shouldRoll"] then
-		f.rollValueText:SetText(rollObj["value"])
+		if rollObj["value"] then
+			f.rollValueText:SetText(rollObj["value"])
+		else
+			f.rollValueText:SetText("")
+		end
 	else
 		f.rollValueText:SetText("")
 	end
@@ -356,6 +361,11 @@ end
 function IBRaidLoot:GetCurrentRollSummaryLoot()
 	currentIndex = math.max(math.min(currentIndex, #currentLootIDs), 1)
 	return currentLoot[currentLootIDs[currentIndex]]
+end
+
+function IBRaidLoot:GoToRollSummaryLoot(index)
+	currentIndex = index
+	self:UpdateRollSummaryFrame()
 end
 
 function IBRaidLoot:GoToPrevRollSummaryLoot()
