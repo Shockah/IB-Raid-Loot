@@ -20,6 +20,12 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	Frame:SetPoint("CENTER", 0, 0)
 	Frame:EnableMouse(true)
 	Frame:SetMovable(true)
+	Frame:SetScript("OnHide", function(self)
+		local lootObj = IBRaidLoot:GetCurrentRollSummaryLoot()
+		if lootObj["pruneAt"] and GetTime() >= lootObj["pruneAt"] then
+			IBRaidLoot:RemoveLoot(lootObj)
+		end
+	end)
 
 	table.insert(UISpecialFrames, "IBRaidLoot_PendingRollsFrame")
 	self:SetupWindowFrame(Frame)
@@ -277,6 +283,7 @@ function IBRaidLoot:UpdateRollSummaryRollsFrame()
 end
 
 function IBRaidLoot:GetCurrentRollSummaryLoot()
+	currentIndex = math.max(math.min(currentIndex, #currentLootIDs), 1)
 	return currentLoot[currentLootIDs[currentIndex]]
 end
 

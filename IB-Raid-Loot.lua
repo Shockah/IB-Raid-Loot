@@ -8,6 +8,7 @@ IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
 IBRaidLootSettings["DEBUG_MODE"] = true
 IBRaidLootSettings["ROLL_TIMEOUT"] = 90 --seconds
+IBRaidLootSettings["PRUNE_TIME"] = 60 * 5 --seconds
 IBRaidLootSettings["RollTypes"] = {}
 IBRaidLootSettings["RollTypeList"] = {}
 
@@ -275,6 +276,8 @@ function IBRaidLoot:OnCommMessage(type, obj, distribution, sender)
 		self:OnRollReceived(obj)
 	elseif type == "RollResponse" then
 		self:OnRollResponseReceived(obj)
+	elseif type == "GiveLoot" then
+		self:OnGiveLootReceived(obj)
 	end
 end
 
@@ -309,6 +312,38 @@ function IBRaidLoot:OnRollResponseReceived(rollObj)
 	lootObj["rolls"][rollObj["player"]] = rollObj
 	self:UpdateLootFrame()
 	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
+end
+
+function IBRaidLoot:OnGiveLootReceived(obj)
+	local uniqueLootID = obj["uniqueLootID"]
+	local lootObj = currentLoot[uniqueLootID]
+	if lootObj == nil then
+		self:DebugPrint("Received roll response for loot "..uniqueLootID..", but there is no info on this item.")
+		return
+	end
+
+	lootObj["player"] = obj["player"]
+	lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
+	self:ScheduleTimer(function()
+		IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+	end, IBRaidLootSettings["PRUNE_TIME"])
+	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
+end
+
+function IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+	if IBRaidLoot_RollSummaryFrame and IBRaidLoot_RollSummaryFrame:IsVisible() then
+		local visibleLootObj = self:GetCurrentRollSummaryLoot()
+		if visibleLootObj["uniqueLootID"] == lootObj["uniqueLootID"] then
+			return
+		end
+	end
+	self:RemoveLoot(lootObj)
+end
+
+function IBRaidLoot:RemoveLoot(lootObj)
+	local uniqueLootID = lootObj["uniqueLootID"]
+	currentLoot[uniqueLootID] = nil
+	table.remove(currentLootIDs, self:keyOf(currentLootIDs, uniqueLootID))
 end
 
 -------
@@ -385,6 +420,11 @@ function IBRaidLoot:FindLootCandidateIndexForPlayer(player)
 end
 
 function IBRaidLoot:GiveMasterLootItem(player, lootObj)
+	local obj = {}
+	obj["uniqueLootID"] = lootObj["uniqueLootID"]
+	obj["player"] = player
+	self:CommMessage("GiveLoot", obj, "RAID")
+
 	if self:IsMasterLooter_Real() then
 		local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
 		if not lootSlotIndex then
@@ -400,6 +440,10 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj)
 	end
 
 	lootObj["player"] = player
+	lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
+	self:ScheduleTimer(function()
+		IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+	end, IBRaidLootSettings["PRUNE_TIME"])
 	self:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
 end
 
@@ -533,6 +577,15 @@ function IBRaidLoot:sizeof(tbl)
 		count = count + 1
 	end)
 	return count
+end
+
+function IBRaidLoot:keyOf(tbl, value)
+	for k, v in pairs(tbl) do
+		if v == value then
+			return k
+		end
+	end
+	return nil
 end
 
 function IBRaidLoot:SetupWindowFrame(frame)
