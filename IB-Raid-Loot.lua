@@ -6,8 +6,9 @@ end
 
 IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
-IBRaidLootSettings["DEBUG_MODE"] = true
+IBRaidLootSettings["DEBUG_MODE"] = false
 IBRaidLootSettings["ROLL_TIMEOUT"] = 120 --seconds
+IBRaidLootSettings["GIVE_LOOT_TIMEOUT"] = 3 --seconds
 IBRaidLootSettings["PRUNE_TIME"] = 60 * 5 --seconds
 IBRaidLootSettings["RollTypes"] = {}
 IBRaidLootSettings["RollTypeList"] = {}
@@ -15,11 +16,14 @@ IBRaidLootSettings["RollTypeList"] = {}
 IBRaidLootData = {}
 IBRaidLootData["currentLootIDs"] = {}
 IBRaidLootData["currentLoot"] = {}
+IBRaidLootData["giveLootRequests"] = {}
 
 local currentLootIDs = IBRaidLootData["currentLootIDs"]
 local currentLoot = IBRaidLootData["currentLoot"]
+local giveLootRequests = IBRaidLootData["giveLootRequests"]
 local RollTypes = IBRaidLootSettings["RollTypes"]
 local RollTypeList = IBRaidLootSettings["RollTypeList"]
+local lootWindowOpen = false
 
 local RollType = nil
 
@@ -161,6 +165,7 @@ function IBRaidLoot:OnSlashCommand(input)
 end
 
 function IBRaidLoot:OnLootOpened()
+	lootWindowOpen = true
 	if not self:IsMasterLooter() then
 		return
 	end
@@ -240,10 +245,24 @@ function IBRaidLoot:OnLootOpened()
 	end
 end
 
-function IBRaidLoot:OnLootSlotCleared(slotIndex)
+function IBRaidLoot:OnLootClosed()
+	lootWindowOpen = false
+	for _, obj in pairs(giveLootRequests) do
+		self:CancelTimer(obj["timer"])
+	end
+	table.wipe(giveLootRequests)
 end
 
-function IBRaidLoot:OnLootClosed()
+function IBRaidLoot:OnLootSlotCleared(event, slotIndex)
+	if not self:IsMasterLooter() then
+		return
+	end
+
+	local obj = giveLootRequests[slotIndex]
+	if obj then
+		giveLootRequests[slotIndex] = nil
+		self:GiveMasterLootItem_Callback(obj["player"], obj["lootObj"], obj["callback"], nil)
+	end
 end
 
 function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
@@ -286,7 +305,9 @@ function IBRaidLoot:OnCommMessage(type, obj, distribution, sender)
 			end
 		end
 
-		self:CreatePendingRollsFrame()
+		if not IBRaidLoot:DidRollOnAllItems() then
+			self:CreatePendingRollsFrame()
+		end
 	elseif type == "Roll" then
 		obj["player"] = sender
 		self:OnRollReceived(obj)
@@ -443,35 +464,60 @@ function IBRaidLoot:FindLootCandidateIndexForPlayer(slotIndex, player)
 	return false
 end
 
-function IBRaidLoot:GiveMasterLootItem(player, lootObj)
+function IBRaidLoot:GiveMasterLootItem(player, lootObj, callback)
 	if self:IsMasterLooter_Real() then
 		local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
 		if not lootSlotIndex then
-			return "Loot window has to be open."
+			if lootWindowOpen then
+				callback("Couldn't find the item.")
+			else
+				callback("Loot window has to be open.")
+			end
+			return
 		end
 
 		local candidateIndex = self:FindLootCandidateIndexForPlayer(lootSlotIndex, player)
 		if not lootSlotIndex then
-			return player.." is not eligible for this item."
+			callback(player.." is not eligible for this item.")
+			return
 		end
 
+		local obj = {}
+		obj["player"] = player
+		obj["lootObj"] = lootObj
+		obj["callback"] = callback
+		obj["timer"] = self:ScheduleTimer(function()
+			if giveLootRequests[lootSlotIndex] and giveLootRequests[lootSlotIndex]["lootObj"]["uniqueLootID"] == lootObj["uniqueLootID"] then
+				giveLootRequests[lootSlotIndex] = nil
+				callback("Error while giving out loot.")
+			end
+		end, IBRaidLootSettings["GIVE_LOOT_TIMEOUT"])
+		giveLootRequests[lootSlotIndex] = obj
 		GiveMasterLoot(lootSlotIndex, candidateIndex)
+	else
+		self:GiveMasterLootItem_Callback(player, lootObj, callback, nil)
 	end
+end
 
-	local obj = {}
-	obj["uniqueLootID"] = lootObj["uniqueLootID"]
-	obj["player"] = player
-	self:CommMessage("GiveLoot", obj, "RAID")
+function IBRaidLoot:GiveMasterLootItem_Callback(player, lootObj, callback, message)
+	if message then
+		callback(message)
+	else
+		local obj = {}
+		obj["uniqueLootID"] = lootObj["uniqueLootID"]
+		obj["player"] = player
+		self:CommMessage("GiveLoot", obj, "RAID")
 
-	table.insert(lootObj["players"], player)
-	if #(lootObj["players"]) == lootObj["quantity"] then
-		lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
-		self:ScheduleTimer(function()
-			IBRaidLoot:RemoveLootIfUIHidden(lootObj)
-		end, IBRaidLootSettings["PRUNE_TIME"])
+		table.insert(lootObj["players"], player)
+		if #(lootObj["players"]) == lootObj["quantity"] then
+			lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
+			self:ScheduleTimer(function()
+				IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+			end, IBRaidLootSettings["PRUNE_TIME"])
+		end
+
+		callback(nil)
 	end
-
-	return nil
 end
 
 function IBRaidLoot:IsMasterLooter_Real()
@@ -481,6 +527,19 @@ function IBRaidLoot:IsMasterLooter_Real()
 
 	local method, partyMaster, raidMaster = GetLootMethod()
 	return method == "master" and partyMaster == 0
+end
+
+function IBRaidLoot:AmIOnRollListForItem(lootObj)
+	local player = GetUnitName("player", true)
+	if not string.find(player, "-") then
+		player = player.."-"..GetRealmName()
+	end
+	for rollPlayer, rollObj in pairs(lootObj["rolls"]) do
+		if rollPlayer == player then
+			return true
+		end
+	end
+	return false
 end
 
 function IBRaidLoot:DidRollOnItem(lootObj)
@@ -498,7 +557,12 @@ end
 
 function IBRaidLoot:DidRollOnAllItems()
 	for uniqueLootID, lootObj in pairs(currentLoot) do
-		if not self:DidRollOnItem(lootObj) then
+		local player = GetUnitName("player", true)
+		if not string.find(player, "-") then
+			player = player.."-"..GetRealmName()
+		end
+		local rollObj = lootObj["rolls"][player]
+		if rollObj and rollObj["type"] == "Pending" then
 			return false
 		end
 	end

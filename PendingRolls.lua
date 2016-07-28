@@ -49,7 +49,7 @@ function IBRaidLoot:CreatePendingRollsItemFrames(closeIfNoItems)
 	local hasItems = false
 	for _, uniqueLootID in pairs(currentLootIDs) do
 		local lootObj = currentLoot[uniqueLootID]
-		if not self:DidRollOnItem(lootObj) then
+		if self:AmIOnRollListForItem(lootObj) and not self:DidRollOnItem(lootObj) then
 			self:CreatePendingRollsItemFrame(lootObj)
 			hasItems = true
 		end
@@ -113,7 +113,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		fQuantity:SetTextColor(1, 1, 1, 1)
 		fQuantity:SetJustifyH("RIGHT")
 		fQuantity:SetJustifyV("BOTTOM")
-		local filename, fontHeight, flags = FontString:GetFont()
+		local filename, fontHeight, flags = fQuantity:GetFont()
 		fQuantity:SetFont(filename, fontHeight, "OUTLINE")
 		f.quantity = fQuantity
 

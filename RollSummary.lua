@@ -64,7 +64,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	fQuantity:SetTextColor(1, 1, 1, 1)
 	fQuantity:SetJustifyH("RIGHT")
 	fQuantity:SetJustifyV("BOTTOM")
-	local filename, fontHeight, flags = FontString:GetFont()
+	local filename, fontHeight, flags = fQuantity:GetFont()
 	fQuantity:SetFont(filename, fontHeight, "OUTLINE")
 	Frame.quantity = fQuantity
 
@@ -122,25 +122,33 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	fRollValueText:SetJustifyH("LEFT")
 	fRollValueText:SetText("Roll")
 
-	StaticPopupDialogs["IBRaidLoot_RollSummary_Confirm"] = {
+	StaticPopupDialogs["IBRaidLoot_RollSummary_GiveLoot_Confirm"] = {
 		text = "Are you sure you want to give this item to %s?",
 		button1 = ACCEPT,
 		button2 = CANCEL,
 		OnAccept = function(self, data)
 			local rollObj = data["rollObj"]
 			local lootObj = data["lootObj"]
-			local message = IBRaidLoot:GiveMasterLootItem(rollObj["player"], lootObj)
-			if message then
-				message(message)
-			else
-				if not IBRaidLoot:GoToFirstUnassigned() then
-					Frame:Hide()
+			IBRaidLoot:GiveMasterLootItem(rollObj["player"], lootObj, function(msg)
+				if msg then
+					StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Error", msg)
+				else
+					if not IBRaidLoot:GoToFirstUnassigned() then
+						Frame:Hide()
+					end
 				end
-			end
-		end,
-		OnCancel = function(_, reason)
+			end)
 		end,
 		sound = "levelup2",
+		timeout = 30,
+		whileDead = true,
+		hideOnEscape = true,
+		showAlert = true
+	}
+
+	StaticPopupDialogs["IBRaidLoot_RollSummary_GiveLoot_Error"] = {
+		text = "%s",
+		button1 = OKAY,
 		timeout = 30,
 		whileDead = true,
 		hideOnEscape = true,
@@ -305,7 +313,7 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 	else
 		f:SetScript("OnClick", function(self, button)
 			if IBRaidLoot:IsMasterLooter() then
-				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Confirm", string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
 				if dialog then
 					local data = {}
 					data["rollObj"] = rollObj
