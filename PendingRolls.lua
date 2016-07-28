@@ -268,6 +268,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				rollObj["player"] = player
 				lootObj["rolls"][rollObj["player"]] = rollObj
 				if ItemsFrame.subframeCount == 1 then
+					IBRaidLoot:GoToFirstUnassigned()
 					IBRaidLoot:CreateRollSummaryFrame()
 				end
 				IBRaidLoot:UpdatePendingRollsFrame(true)

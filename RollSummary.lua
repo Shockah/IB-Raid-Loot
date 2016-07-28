@@ -127,9 +127,15 @@ function IBRaidLoot:CreateRollSummaryFrame()
 		button1 = ACCEPT,
 		button2 = CANCEL,
 		OnAccept = function(self, data)
-			local message = IBRaidLoot:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
+			local rollObj = data["rollObj"]
+			local lootObj = data["lootObj"]
+			local message = IBRaidLoot:GiveMasterLootItem(rollObj["player"], lootObj)
 			if message then
-				IBRaidLoot:DebugPrint(message)
+				message(message)
+			else
+				if not IBRaidLoot:GoToFirstUnassigned() then
+					Frame:Hide()
+				end
 			end
 		end,
 		OnCancel = function(_, reason)
@@ -352,4 +358,17 @@ end
 function IBRaidLoot:GoToNextRollSummaryLoot()
 	currentIndex = currentIndex + 1
 	self:UpdateRollSummaryFrame()
+end
+
+function IBRaidLoot:GoToFirstUnassigned()
+	for i = 1, #currentLootIDs do
+		local uniqueLootID = currentLootIDs[i]
+		local lootObj = currentLoot[uniqueLootID]
+		if #(lootObj["players"]) < lootObj["quantity"] then
+			currentIndex = currentIndex + 1
+			self:UpdateRollSummaryFrame()
+			return currentIndex
+		end
+	end
+	return nil
 end

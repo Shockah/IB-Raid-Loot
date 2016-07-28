@@ -105,6 +105,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
 			end
 		elseif button == "RightButton" then
 			if next(currentLootIDs) ~= nil then
+				IBRaidLoot:GoToFirstUnassigned()
 				IBRaidLoot:CreateRollSummaryFrame()
 			end
 		end
@@ -470,7 +471,6 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj)
 		end, IBRaidLootSettings["PRUNE_TIME"])
 	end
 
-	self:GoToNextRollSummaryLoot()
 	return nil
 end
 
