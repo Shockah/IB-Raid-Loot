@@ -57,8 +57,22 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	fIcon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
 	end)
-	fIcon:RegisterForClicks("RightButtonDown")
 	Frame.icon = fIcon
+
+	local fQuantity = fIcon:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	fQuantity:SetPoint("BOTTOMRIGHT", -2, 2)
+	fQuantity:SetTextColor(1, 1, 1, 1)
+	fQuantity:SetJustifyH("RIGHT")
+	fQuantity:SetJustifyV("BOTTOM")
+	local filename, fontHeight, flags = FontString:GetFont()
+	fQuantity:SetFont(filename, fontHeight, "OUTLINE")
+	Frame.quantity = fQuantity
+
+	local fHighlight = fContent:CreateTexture(nil, "BACKGROUND")
+	fHighlight:SetSize(fContent:GetWidth() - fIcon:GetWidth(), 36)
+	fHighlight:SetPoint("LEFT", fIcon, "RIGHT", 0, 0)
+	fHighlight:SetColorTexture(1, 1, 1, 0.15)
+	Frame.highlight = fHighlight
 
 	local fName = fContent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	fName:SetPoint("LEFT", fIcon, "RIGHT", 6, 0)
@@ -113,7 +127,10 @@ function IBRaidLoot:CreateRollSummaryFrame()
 		button1 = ACCEPT,
 		button2 = CANCEL,
 		OnAccept = function(self, data)
-			IBRaidLoot:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
+			local message = IBRaidLoot:GiveMasterLootItem(data["rollObj"]["player"], data["lootObj"])
+			if message then
+				IBRaidLoot:DebugPrint(message)
+			end
 		end,
 		OnCancel = function(_, reason)
 		end,
@@ -155,6 +172,23 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
 	end)
+	Frame.icon:SetScript("OnClick", function(self)
+		if IsControlKeyDown() then
+			DressUpItemLink(lootObj["link"])
+		elseif IsShiftKeyDown() then
+			IBRaidLoot:InsertInChatEditbox(lootObj["link"])
+		end
+	end)
+
+	if lootObj["quantity"] == 1 then
+		Frame.quantity:SetText("")
+	else
+		if next(lootObj["players"]) == nil then
+			Frame.quantity:SetText(lootObj["quantity"])
+		else
+			Frame.quantity:SetText((#(lootObj["players"])).."/"..lootObj["quantity"])
+		end
+	end
 
 	local r, g, b = GetItemQualityColor(lootObj["quality"])
 	Frame.name:SetText(lootObj["name"])
@@ -164,6 +198,27 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 
 	Frame.prevButton:SetEnabled(currentIndex > 1)
 	Frame.nextButton:SetEnabled(currentIndex < self:sizeof(currentLootIDs))
+
+	if not self:DidEveryoneRollOnItem(lootObj) and GetTime() < lootObj["timeoutEnd"] then
+		Frame:SetScript("OnUpdate", function(self, elapsed)
+			local time = GetTime()
+			local timeMin = lootObj["timeoutStart"]
+			local timeMax = lootObj["timeoutEnd"]
+			local v = (time - timeMin) / (timeMax - timeMin)
+			v = math.min(math.max(v, 0), 1)
+			local v2 = 1 - v
+
+			self.highlight:Show()
+			self.highlight:SetWidth((self.highlight:GetParent():GetWidth() - self.icon:GetWidth()) * v2)
+			if v == 1 then
+				self:SetScript("OnUpdate", nil)
+				self.highlight:Hide()
+			end
+		end)
+	else
+		Frame:SetScript("OnUpdate", nil)
+		Frame.highlight:Hide()
+	end
 
 	self:UpdateRollSummaryRollsFrame()
 end
@@ -218,18 +273,16 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f.rollValueText = fRollValueText
 	end
 
-	if lootObj["player"] then
-		if rollObj["player"] == lootObj["player"] then
-			f.highlight:SetColorTexture(0, 1, 0, 0.35)
-		else
-			f.highlight:SetColorTexture(1, 1, 1, 0.2)
-		end
-
+	if self:contains(lootObj["players"], rollObj["player"]) then
+		f.highlight:SetColorTexture(0, 1, 0, 0.35)
 		f:SetScript("OnEnter", nil)
 		f:SetScript("OnLeave", nil)
 		f.highlight:Show()
-
-		f:SetScript("OnClick", nil)
+	elseif #(lootObj["players"]) == lootObj["quantity"] then
+		f.highlight:SetColorTexture(1, 1, 1, 0.2)
+		f:SetScript("OnEnter", nil)
+		f:SetScript("OnLeave", nil)
+		f.highlight:Show()
 	else
 		f.highlight:SetColorTexture(1, 1, 0, 0.35)
 		f.highlight:Hide()
@@ -239,7 +292,11 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f:SetScript("OnLeave", function(self)
 			self.highlight:Hide()
 		end)
+	end
 
+	if #(lootObj["players"]) == lootObj["quantity"] then
+		f:SetScript("OnClick", nil)
+	else
 		f:SetScript("OnClick", function(self, button)
 			if IBRaidLoot:IsMasterLooter() then
 				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_Confirm", rollObj["player"])

@@ -7,7 +7,7 @@ end
 IBRaidLootSettings = {}
 IBRaidLootSettings["DEBUG"] = true
 IBRaidLootSettings["DEBUG_MODE"] = true
-IBRaidLootSettings["ROLL_TIMEOUT"] = 90 --seconds
+IBRaidLootSettings["ROLL_TIMEOUT"] = 120 --seconds
 IBRaidLootSettings["PRUNE_TIME"] = 60 * 5 --seconds
 IBRaidLootSettings["RollTypes"] = {}
 IBRaidLootSettings["RollTypeList"] = {}
@@ -127,6 +127,7 @@ function IBRaidLoot:OnInitialize()
 	self:RegisterEvent("ADDON_LOADED", "OnAddonLoaded")
 	self:RegisterBucketEvent("LOOT_READY", 0.25, "OnLootOpened")
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
+	self:RegisterEvent("LOOT_SLOT_CLEARED", "OnLootSlotCleared")
 
 	self:RegisterComm(AceCommPrefix)
 
@@ -164,6 +165,7 @@ function IBRaidLoot:OnLootOpened()
 	end
 
 	local newLoot = {}
+	local newLootIDs = {}
 
 	local numLootItems = GetNumLootItems()
 	local threshold = self:GetLootThreshold()
@@ -186,21 +188,27 @@ function IBRaidLoot:OnLootOpened()
 					lootObj["name"] = item
 					lootObj["timeout"] = IBRaidLootSettings["ROLL_TIMEOUT"]
 					lootObj["uniqueLootID"] = uniqueLootID
+					lootObj["quantity"] = 1
+					lootObj["players"] = {}
 
 					local rolls = {}
-					table.foreach(self:GetLootEligiblePlayers(), function(_, player)
+					for _, player in pairs(self:GetLootEligiblePlayers(i)) do
 						local rollObj = {}
 						rollObj["player"] = player
 						rollObj["uniqueLootID"] = uniqueLootID
 						rollObj["type"] = "Pending"
 						rollObj["value"] = 0
 						rolls[player] = rollObj
-					end)
+					end
 					lootObj["rolls"] = rolls
 
 					table.insert(currentLootIDs, uniqueLootID)
 					currentLoot[uniqueLootID] = lootObj
 					table.insert(newLoot, lootObj)
+					table.insert(newLootIDs, uniqueLootID)
+				elseif self:contains(newLootIDs, uniqueLootID) then
+					lootObj = currentLoot[uniqueLootID]
+					lootObj["quantity"] = lootObj["quantity"] + 1
 				end
 			end
 		end
@@ -231,6 +239,9 @@ function IBRaidLoot:OnLootOpened()
 	end
 end
 
+function IBRaidLoot:OnLootSlotCleared(slotIndex)
+end
+
 function IBRaidLoot:OnLootClosed()
 end
 
@@ -252,7 +263,11 @@ function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
 		return
 	end
 
-	if sender == GetUnitName("player", true) then
+	local player = GetUnitName("player", true)
+	if not string.find(player, "-") then
+		player = player.."-"..GetRealmName()
+	end
+	if sender == player then
 		return
 	end
 	self:OnCommMessage(final["Type"], final["Body"], distribution, sender)
@@ -275,6 +290,9 @@ function IBRaidLoot:OnCommMessage(type, obj, distribution, sender)
 		obj["player"] = sender
 		self:OnRollReceived(obj)
 	elseif type == "RollResponse" then
+		if not obj["player"] then
+			obj["player"] = sender
+		end
 		self:OnRollResponseReceived(obj)
 	elseif type == "GiveLoot" then
 		self:OnGiveLootReceived(obj)
@@ -292,12 +310,12 @@ function IBRaidLoot:OnRollReceived(rollObj)
 	if self:IsMasterLooter() then
 		if RollTypes[rollObj["type"]]["shouldRoll"] then
 			rollObj["value"] = random(100)
-			self:SendCommMessage("RollResponse", rollObj, "RAID")
+			self:CommMessage("RollResponse", rollObj, "RAID")
 		end
 	end
 
 	lootObj["rolls"][rollObj["player"]] = rollObj
-	self:UpdateLootFrame()
+	self:UpdatePendingRollsFrame()
 	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
 end
 
@@ -310,7 +328,7 @@ function IBRaidLoot:OnRollResponseReceived(rollObj)
 	end
 
 	lootObj["rolls"][rollObj["player"]] = rollObj
-	self:UpdateLootFrame()
+	self:UpdatePendingRollsFrame()
 	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
 end
 
@@ -322,11 +340,13 @@ function IBRaidLoot:OnGiveLootReceived(obj)
 		return
 	end
 
-	lootObj["player"] = obj["player"]
-	lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
-	self:ScheduleTimer(function()
-		IBRaidLoot:RemoveLootIfUIHidden(lootObj)
-	end, IBRaidLootSettings["PRUNE_TIME"])
+	table.insert(lootObj["players"], obj["player"])
+	if #(lootObj["players"]) == lootObj["quantity"] then
+		lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
+		self:ScheduleTimer(function()
+			IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+		end, IBRaidLootSettings["PRUNE_TIME"])
+	end
 	self:UpdateRollSummaryFrameForLoot(uniqueLootID)
 end
 
@@ -366,14 +386,18 @@ function IBRaidLoot:IsMasterLooter()
 	return self:IsMasterLooter_Real()
 end
 
-function IBRaidLoot:GetLootEligiblePlayers(lootObj, player)
+function IBRaidLoot:GetLootEligiblePlayers(slotIndex)
 	if IBRaidLootSettings["DEBUG_MODE"] then
-		return { GetUnitName("player") }
+		local player = GetUnitName("player", true)
+		if not string.find(player, "-") then
+			player = player.."-"..GetRealmName()
+		end
+		return { player }
 	end
 
 	local players = {}
 	for i = 1, 40 do
-		local player = GetMasterLootCandidate(i)
+		local player = GetMasterLootCandidate(slotIndex, i)
 		if player ~= nil then
 			if not string.find(player, "-") then
 				player = player.."-"..GetRealmName()
@@ -391,22 +415,21 @@ end
 function IBRaidLoot:FindLootSlotForLootObj(lootObj)
 	local numLootItems = GetNumLootItems()
 	for i = 1, numLootItems do
-		local texture, item, quantity, quality, locked = GetLootSlotInfo(i)
-		local lootSlotType = GetLootSlotType(i)
-
 		local link = GetLootSlotLink(i)
 		local corpseGUID = GetLootSourceInfo(i)
-		local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
-		if uniqueLootID == lootObj["uniqueLootId"] then
-			return i
+		if corpseGUID then
+			local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
+			if uniqueLootID == lootObj["uniqueLootID"] then
+				return i
+			end
 		end
 	end
 	return false
 end
 
-function IBRaidLoot:FindLootCandidateIndexForPlayer(player)
+function IBRaidLoot:FindLootCandidateIndexForPlayer(slotIndex, player)
 	for i = 1, 40 do
-		local candidate = GetMasterLootCandidate(i)
+		local candidate = GetMasterLootCandidate(slotIndex, i)
 		if candidate ~= nil then
 			if not string.find(candidate, "-") then
 				candidate = candidate.."-"..GetRealmName()
@@ -420,18 +443,13 @@ function IBRaidLoot:FindLootCandidateIndexForPlayer(player)
 end
 
 function IBRaidLoot:GiveMasterLootItem(player, lootObj)
-	local obj = {}
-	obj["uniqueLootID"] = lootObj["uniqueLootID"]
-	obj["player"] = player
-	self:CommMessage("GiveLoot", obj, "RAID")
-
 	if self:IsMasterLooter_Real() then
 		local lootSlotIndex = self:FindLootSlotForLootObj(lootObj)
 		if not lootSlotIndex then
 			return "Loot window has to be open."
 		end
 
-		local candidateIndex = self:FindLootCandidateIndexForPlayer(player)
+		local candidateIndex = self:FindLootCandidateIndexForPlayer(lootSlotIndex, player)
 		if not lootSlotIndex then
 			return player.." is not eligible for this item."
 		end
@@ -439,12 +457,21 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj)
 		GiveMasterLoot(lootSlotIndex, candidateIndex)
 	end
 
-	lootObj["player"] = player
-	lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
-	self:ScheduleTimer(function()
-		IBRaidLoot:RemoveLootIfUIHidden(lootObj)
-	end, IBRaidLootSettings["PRUNE_TIME"])
-	self:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
+	local obj = {}
+	obj["uniqueLootID"] = lootObj["uniqueLootID"]
+	obj["player"] = player
+	self:CommMessage("GiveLoot", obj, "RAID")
+
+	table.insert(lootObj["players"], player)
+	if #(lootObj["players"]) == lootObj["quantity"] then
+		lootObj["pruneAt"] = GetTime() + IBRaidLootSettings["PRUNE_TIME"]
+		self:ScheduleTimer(function()
+			IBRaidLoot:RemoveLootIfUIHidden(lootObj)
+		end, IBRaidLootSettings["PRUNE_TIME"])
+	end
+
+	self:GoToNextRollSummaryLoot()
+	return nil
 end
 
 function IBRaidLoot:IsMasterLooter_Real()
@@ -457,7 +484,11 @@ function IBRaidLoot:IsMasterLooter_Real()
 end
 
 function IBRaidLoot:DidRollOnItem(lootObj)
-	local rollObj = lootObj["rolls"][GetUnitName("player", true)]
+	local player = GetUnitName("player", true)
+	if not string.find(player, "-") then
+		player = player.."-"..GetRealmName()
+	end
+	local rollObj = lootObj["rolls"][player]
 	if rollObj == nil then
 		return false
 	end
@@ -496,37 +527,35 @@ end
 
 function IBRaidLoot:GetSortedRolls(lootObj)
 	local rolls = {}
-	table.foreach(lootObj["rolls"], function(player, rollObj)
+	for player, rollObj in pairs(lootObj["rolls"]) do
 		table.insert(rolls, rollObj)
-	end)
-	table.sort(rolls, RollSortComparison)
-	return rolls
+	end
+	return self:SortRolls(rolls)
 end
 
-function IBRaidLoot:RollSortComparison(a, b)
-	local aTypeObj = RollTypes[a["type"]]
-	local bTypeObj = RollTypes[b["type"]]
-	if aTypeObj["order"] ~= bTypeObj["order"] then
-		return aTypeObj["order"] < bTypeObj["order"]
-	else
-		if aTypeObj["shouldRoll"] then
-			if a["value"] ~= b["value"] then
-				return a["value"] > b["value"]
+function IBRaidLoot:SortRolls(rolls)
+	sort(rolls, function(a, b)
+		local aTypeObj = RollTypes[a["type"]]
+		local bTypeObj = RollTypes[b["type"]]
+		if aTypeObj["order"] ~= bTypeObj["order"] then
+			return aTypeObj["order"] < bTypeObj["order"]
+		else
+			if aTypeObj["shouldRoll"] then
+				if a["value"] ~= b["value"] then
+					return a["value"] > b["value"]
+				else
+					return a["player"] < b["player"]
+				end
 			else
 				return a["player"] < b["player"]
 			end
-		else
-			return a["player"] < b["player"]
 		end
-	end
-end
-
-function IBRaidLoot:GetItemIDFromLink(link)
-	return string.gsub(link, ".-\124H([^\124]*)\124h.*", "%1")
+	end)
+	return rolls
 end
 
 function IBRaidLoot:GetUniqueLootID(link, corpseGUID)
-	return corpseGUID..":"..self:GetItemIDFromLink(link)
+	return corpseGUID..":"..string.gsub(link, "%|h.*$", "")
 end
 
 function IBRaidLoot:CommMessage(type, obj, distribution, target)
@@ -541,6 +570,23 @@ function IBRaidLoot:CommMessage(type, obj, distribution, target)
 
 	nextCommMessageID = nextCommMessageID + 1
 	IBRaidLoot:SendCommMessage(AceCommPrefix, final, distribution, target, "NORMAL")
+end
+
+function IBRaidLoot:FindActiveChatEditbox()
+	for i = 1, 10 do
+		local frame = _G["ChatFrame"..i.."EditBox"]
+		if frame:IsVisible() then
+			return frame
+		end
+	end
+	return nil
+end
+
+function IBRaidLoot:InsertInChatEditbox(text)
+	local chatEditbox = self:FindActiveChatEditbox()
+	if chatEditbox then
+		chatEditbox:Insert(text)
+	end
 end
 
 function IBRaidLoot:DebugPrint(message)
@@ -586,6 +632,10 @@ function IBRaidLoot:keyOf(tbl, value)
 		end
 	end
 	return nil
+end
+
+function IBRaidLoot:contains(tbl, value)
+	return self:keyOf(tbl, value) ~= nil
 end
 
 function IBRaidLoot:SetupWindowFrame(frame)

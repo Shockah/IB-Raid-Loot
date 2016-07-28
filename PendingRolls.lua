@@ -108,6 +108,15 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f.icon = fIcon
 		availableWidth = availableWidth - fIcon:GetWidth() * fIcon:GetScale() - CHILD_MARGIN - 2
 
+		local fQuantity = fIcon:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+		fQuantity:SetPoint("BOTTOMRIGHT", -2, 2)
+		fQuantity:SetTextColor(1, 1, 1, 1)
+		fQuantity:SetJustifyH("RIGHT")
+		fQuantity:SetJustifyV("BOTTOM")
+		local filename, fontHeight, flags = FontString:GetFont()
+		fQuantity:SetFont(filename, fontHeight, "OUTLINE")
+		f.quantity = fQuantity
+
 		local rollButtonCount = self:GetRollTypeButtonCount()
 		local xx = 0
 		f.rollButtons = {}
@@ -177,7 +186,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 			v = math.min(math.max(v, 0), 1)
 			local v2 = 1 - v
 
-			self.highlight:SetWidth(self:GetParent():GetWidth() * v2)
+			self.highlight:SetWidth(self.highlight:GetParent():GetWidth() * v2)
 			if v == 1 then
 				self:SetScript("OnUpdate", nil)
 			end
@@ -191,11 +200,19 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 		GameTooltip:SetHyperlink(lootObj["link"])
 	end)
-	--[[fIcon:SetScript("OnClick", function(self)
+	f.icon:SetScript("OnClick", function(self)
 		if IsControlKeyDown() then
 			DressUpItemLink(lootObj["link"])
+		elseif IsShiftKeyDown() then
+			IBRaidLoot:InsertInChatEditbox(lootObj["link"])
 		end
-	end)]]--
+	end)
+
+	if lootObj["quantity"] == 1 then
+		f.quantity:SetText("")
+	else
+		f.quantity:SetText(lootObj["quantity"])
+	end
 
 	local r, g, b = GetItemQualityColor(lootObj["quality"])
 	f.name:SetText(lootObj["name"])
@@ -243,8 +260,12 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				else
 					IBRaidLoot:CommMessage("Roll", rollObj, "RAID")
 				end
-				
-				rollObj["player"] = GetUnitName("player", true)
+
+				local player = GetUnitName("player", true)
+				if not string.find(player, "-") then
+					player = player.."-"..GetRealmName()
+				end
+				rollObj["player"] = player
 				lootObj["rolls"][rollObj["player"]] = rollObj
 				if ItemsFrame.subframeCount == 1 then
 					IBRaidLoot:CreateRollSummaryFrame()
@@ -260,9 +281,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		index = index + 1
 		local fRollInfo = f.rollInfos[index]
 		local rolls = self:GetRollsOfType(lootObj, obj["type"])
-		table.sort(rolls, function(a, b)
-			return IBRaidLoot:RollSortComparison(a, b)
-		end)
+		self:SortRolls(rolls)
 		fRollInfo.text:SetText(#rolls)
 		fRollInfo:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT");
