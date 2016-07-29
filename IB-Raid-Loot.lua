@@ -5,7 +5,7 @@ if not IBRaidLootDB then
 end
 
 IBRaidLootSettings = {}
-IBRaidLootSettings["DEBUG"] = true
+IBRaidLootSettings["DEBUG"] = false
 IBRaidLootSettings["DEBUG_MODE"] = false
 IBRaidLootSettings["ROLL_TIMEOUT"] = 120 --seconds
 IBRaidLootSettings["GIVE_LOOT_TIMEOUT"] = 3 --seconds
@@ -133,15 +133,15 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
 				end
 
 				local toRemove = {}
-				for uniqueLootID, lootObj in pairs(currentLoot) do
+				for lootID, lootObj in pairs(currentLoot) do
 					local rollObj = lootObj["rolls"][player]
 					if rollObj["type"] ~= "Pending" then
-						table.insert(toRemove, uniqueLootID)
+						table.insert(toRemove, lootObj)
 					end
 				end
 
-				for _, uniqueLootId in pairs(toRemove) do
-					IBRaidLoot:RemoveLoot(uniqueLootId)
+				for _, lootObj in pairs(toRemove) do
+					IBRaidLoot:RemoveLoot(lootObj)
 				end
 			else
 				if next(currentLootIDs) ~= nil then
@@ -222,13 +222,13 @@ function IBRaidLoot:OnLootOpened()
 		if not locked and lootSlotType == 1 and quality >= threshold and quantity == 1 then
 			local link = GetLootSlotLink(i)
 			local corpseGUID = GetLootSourceInfo(i)
-			local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
+			local lootID = self:GetLootID(link, corpseGUID)
 
 			if corpseGUID then
-				if currentLoot[uniqueLootID] == nil then
+				if currentLoot[lootID] == nil then
 					local lootObj = {}
 					lootObj["link"] = link
-					lootObj["uniqueLootID"] = uniqueLootID
+					lootObj["lootID"] = lootID
 					lootObj["quantity"] = 1
 
 					local rolls = {}
@@ -240,12 +240,12 @@ function IBRaidLoot:OnLootOpened()
 					end
 					lootObj["rolls"] = rolls
 
-					table.insert(currentLootIDs, uniqueLootID)
-					currentLoot[uniqueLootID] = lootObj
+					table.insert(currentLootIDs, lootID)
+					currentLoot[lootID] = lootObj
 					table.insert(newLoot, lootObj)
-					table.insert(newLootIDs, uniqueLootID)
-				elseif self:contains(newLootIDs, uniqueLootID) then
-					lootObj = currentLoot[uniqueLootID]
+					table.insert(newLootIDs, lootID)
+				elseif self:contains(newLootIDs, lootID) then
+					lootObj = currentLoot[lootID]
 					lootObj["quantity"] = lootObj["quantity"] + 1
 				end
 			end
@@ -261,12 +261,17 @@ function IBRaidLoot:OnLootOpened()
 			lootObj["players"] = {}
 			lootObj["timeoutStart"] = GetTime()
 			lootObj["timeoutEnd"] = lootObj["timeoutStart"] + IBRaidLootSettings["ROLL_TIMEOUT"]
-			self:ScheduleTimer(function()
+			lootObj["rollTimeoutTimer"] = self:ScheduleTimer(function()
 				local updated = false
 				for player, rollObj in pairs(lootObj["rolls"]) do
 					if rollObj["type"] == "Pending" then
 						rollObj["type"] = "No response"
-						IBRaidLoot:CommMessage("RollResponse", rollObj, "RAID")
+
+						local sendObj = {}
+						sendObj["lootID"] = lootObj["lootID"]
+						sendObj["type"] = rollObj["type"]
+						sendObj["player"] = player
+						IBRaidLoot:CommMessage("Roll", sendObj, "RAID")
 						updated = true
 					end
 				end
@@ -304,17 +309,23 @@ function IBRaidLoot:OnLootSlotCleared(event, slotIndex)
 		giveLootRequests[slotIndex] = nil
 		self:GiveMasterLootItem_Callback(obj["player"], obj["lootObj"], obj["callback"], nil)
 	else
-		local uniqueLootID = lootCache[slotIndex]
-		local lootObj = currentLoot[uniqueLootID]
-		if lootObj then
-			if lootObj["quantity"] > 1 then
-				lootObj["quantity"] = lootObj["quantity"] - 1
-				self:UpdateRollSummaryFrame(uniqueLootID)
-			else
-				self:RemoveLoot(uniqueLootID)
-				self:UpdateRollSummaryFrame()
+		local lootID = lootCache[slotIndex]
+		if lootID then
+			local lootObj = currentLoot[lootID]
+			if lootObj then
+				local sendObj = {}
+				sendObj["lootID"] = lootID
+				self:CommMessage("LootGivenManually", sendObj, "RAID")
+
+				if lootObj["quantity"] > 1 then
+					lootObj["quantity"] = lootObj["quantity"] - 1
+					self:UpdateRollSummaryFrame(lootID)
+				else
+					self:RemoveLoot(lootObj)
+					self:UpdateRollSummaryFrame()
+				end
+				self:UpdatePendingRollsFrame(true)
 			end
-			self:UpdatePendingRollsFrame()
 		end
 	end
 
@@ -360,20 +371,22 @@ function IBRaidLoot:OnCommMessage(type, obj, distribution, sender)
 	elseif type == "Roll" then
 		self:OnRollReceived(obj, sender)
 	elseif type == "RollResponse" then
-		self:OnRollResponseReceived(obj)
+		self:OnRollResponseReceived(obj, sender)
 	elseif type == "GiveLoot" then
 		self:OnGiveLootReceived(obj)
+	elseif type == "LootGivenManually" then
+		self:OnLootGivenManuallyReceived(obj)
 	end
 end
 
 function IBRaidLoot:OnRollsRequestReceived(obj, sender)
 	for _, lootObj in pairs(obj["loot"]) do
-		local uniqueLootID = lootObj["uniqueLootID"]
-		if currentLoot[uniqueLootID] then
-			self:RemoveLoot(uniqueLootID)
+		local lootID = lootObj["lootID"]
+		if currentLoot[lootID] then
+			self:RemoveLoot(lootObj)
 		end
-		table.insert(currentLootIDs, uniqueLootID)
-		currentLoot[uniqueLootID] = lootObj
+		table.insert(currentLootIDs, lootID)
+		currentLoot[lootID] = lootObj
 		lootObj["players"] = {}
 		lootObj["timeoutStart"] = GetTime()
 		lootObj["timeoutEnd"] = lootObj["timeoutStart"] + obj["timeout"]
@@ -385,34 +398,39 @@ function IBRaidLoot:OnRollsRequestReceived(obj, sender)
 end
 
 function IBRaidLoot:OnRollReceived(obj, sender)
-	local lootObj = currentLoot[obj["uniqueLootID"]]
+	local lootObj = currentLoot[obj["lootID"]]
 	if not lootObj then
-		self:DebugPrint("Received roll for loot "..obj["uniqueLootID"]..", but we don't know about this item.")
+		--self:DebugPrint("Received roll for loot "..obj["lootID"]..", but we don't know about this item.")
 		return
 	end
 
-	local rollObj = lootObj["rolls"][sender]
+	if not obj["player"] then
+		obj["player"] = sender
+	end
+
+	local rollObj = lootObj["rolls"][obj["player"]]
 	rollObj["type"] = obj["type"]
 
 	if self:IsMasterLooter() then
 		if RollTypes[obj["type"]]["shouldRoll"] then
 			rollObj["value"] = random(100)
 			local obj2 = {}
-			obj2["uniqueLootID"] = obj["uniqueLootID"]
-			obj2["player"] = sender
+			obj2["lootID"] = obj["lootID"]
+			obj2["player"] = obj["player"]
+			obj2["type"] = obj["type"]
 			obj2["value"] = rollObj["value"]
 			self:CommMessage("RollResponse", obj2, "RAID")
 		end
 	end
 
-	self:UpdatePendingRollsFrame()
-	self:UpdateRollSummaryFrameForLoot(obj["uniqueLootID"])
+	self:UpdatePendingRollsFrame(true)
+	self:UpdateRollSummaryFrameForLoot(obj["lootID"])
 end
 
-function IBRaidLoot:OnRollResponseReceived(obj)
-	local lootObj = currentLoot[obj["uniqueLootID"]]
+function IBRaidLoot:OnRollResponseReceived(obj, sender)
+	local lootObj = currentLoot[obj["lootID"]]
 	if not lootObj then
-		self:DebugPrint("Received roll response for loot "..obj["uniqueLootID"]..", but we don't know about this item.")
+		--self:DebugPrint("Received roll response for loot "..obj["lootID"]..", but we don't know about this item.")
 		return
 	end
 
@@ -420,14 +438,14 @@ function IBRaidLoot:OnRollResponseReceived(obj)
 	rollObj["type"] = obj["type"]
 	rollObj["value"] = obj["value"]
 
-	self:UpdatePendingRollsFrame()
-	self:UpdateRollSummaryFrameForLoot(obj["uniqueLootID"])
+	self:UpdatePendingRollsFrame(true)
+	self:UpdateRollSummaryFrameForLoot(obj["lootID"])
 end
 
 function IBRaidLoot:OnGiveLootReceived(obj)
-	local lootObj = currentLoot[obj["uniqueLootID"]]
+	local lootObj = currentLoot[obj["lootID"]]
 	if lootObj == nil then
-		self:DebugPrint("Tried to give loot "..obj["uniqueLootID"]..", but there is no info on this item.")
+		self:DebugPrint("Tried to give loot "..obj["lootID"]..", but there is no info on this item.")
 		return
 	end
 
@@ -438,13 +456,30 @@ function IBRaidLoot:OnGiveLootReceived(obj)
 			IBRaidLoot:RemoveLootIfUIHidden(lootObj)
 		end, IBRaidLootSettings["PRUNE_TIME"])
 	end
-	self:UpdateRollSummaryFrameForLoot(obj["uniqueLootID"])
+	self:UpdateRollSummaryFrameForLoot(obj["lootID"])
+end
+
+function IBRaidLoot:OnLootGivenManuallyReceived(obj)
+	local lootObj = currentLoot[obj["lootID"]]
+	if lootObj == nil then
+		self:DebugPrint("Tried to give loot "..obj["lootID"]..", but there is no info on this item.")
+		return
+	end
+
+	if lootObj["quantity"] > 1 then
+		lootObj["quantity"] = lootObj["quantity"] - 1
+		self:UpdateRollSummaryFrame(obj["lootID"])
+	else
+		self:RemoveLoot(lootObj)
+		self:UpdateRollSummaryFrame()
+	end
+	self:UpdatePendingRollsFrame(true)
 end
 
 function IBRaidLoot:RemoveLootIfUIHidden(lootObj)
 	if IBRaidLoot_RollSummaryFrame and IBRaidLoot_RollSummaryFrame:IsVisible() then
 		local visibleLootObj = self:GetCurrentRollSummaryLoot()
-		if visibleLootObj["uniqueLootID"] == lootObj["uniqueLootID"] then
+		if visibleLootObj["lootID"] == lootObj["lootID"] then
 			return
 		end
 	end
@@ -452,9 +487,12 @@ function IBRaidLoot:RemoveLootIfUIHidden(lootObj)
 end
 
 function IBRaidLoot:RemoveLoot(lootObj)
-	local uniqueLootID = lootObj["uniqueLootID"]
-	currentLoot[uniqueLootID] = nil
-	table.remove(currentLootIDs, self:keyOf(currentLootIDs, uniqueLootID))
+	local lootID = lootObj["lootID"]
+	if lootObj["rollTimeoutTimer"] then
+		self:CancelTimer(lootObj["rollTimeoutTimer"])
+	end
+	currentLoot[lootID] = nil
+	table.remove(currentLootIDs, self:keyOf(currentLootIDs, lootID))
 end
 
 -------
@@ -507,11 +545,14 @@ function IBRaidLoot:CacheLootSlots()
 	local cache = {}
 	local numLootItems = GetNumLootItems()
 	for i = 1, numLootItems do
-		local link = GetLootSlotLink(i)
-		local corpseGUID = GetLootSourceInfo(i)
-		if corpseGUID then
-			local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
-			table.insert(cache, uniqueLootID)
+		local lootSlotType = GetLootSlotType(i)
+		if lootSlotType == 1 then
+			local link = GetLootSlotLink(i)
+			local corpseGUID = GetLootSourceInfo(i)
+			if corpseGUID then
+				local lootID = self:GetLootID(link, corpseGUID)
+				cache[i] = lootID
+			end
 		end
 	end
 	return cache
@@ -523,8 +564,8 @@ function IBRaidLoot:FindLootSlotForLootObj(lootObj)
 		local link = GetLootSlotLink(i)
 		local corpseGUID = GetLootSourceInfo(i)
 		if corpseGUID then
-			local uniqueLootID = self:GetUniqueLootID(link, corpseGUID)
-			if uniqueLootID == lootObj["uniqueLootID"] then
+			local lootID = self:GetLootID(link, corpseGUID)
+			if lootID == lootObj["lootID"] then
 				return i
 			end
 		end
@@ -570,7 +611,7 @@ function IBRaidLoot:GiveMasterLootItem(player, lootObj, callback)
 		obj["lootObj"] = lootObj
 		obj["callback"] = callback
 		obj["timer"] = self:ScheduleTimer(function()
-			if giveLootRequests[lootSlotIndex] and giveLootRequests[lootSlotIndex]["lootObj"]["uniqueLootID"] == lootObj["uniqueLootID"] then
+			if giveLootRequests[lootSlotIndex] and giveLootRequests[lootSlotIndex]["lootObj"]["lootID"] == lootObj["lootID"] then
 				giveLootRequests[lootSlotIndex] = nil
 				callback("Error while giving out loot.")
 			end
@@ -587,7 +628,7 @@ function IBRaidLoot:GiveMasterLootItem_Callback(player, lootObj, callback, messa
 		callback(message)
 	else
 		local obj = {}
-		obj["uniqueLootID"] = lootObj["uniqueLootID"]
+		obj["lootID"] = lootObj["lootID"]
 		obj["player"] = player
 		self:CommMessage("GiveLoot", obj, "RAID")
 
@@ -639,7 +680,7 @@ function IBRaidLoot:DidRollOnItem(lootObj)
 end
 
 function IBRaidLoot:DidRollOnAllItems()
-	for uniqueLootID, lootObj in pairs(currentLoot) do
+	for lootID, lootObj in pairs(currentLoot) do
 		local player = GetUnitName("player", true)
 		if not string.find(player, "-") then
 			player = player.."-"..GetRealmName()
@@ -706,7 +747,7 @@ function IBRaidLoot:GetCorpseID(corpseGUID)
 	return mobID..":"..spawnID
 end
 
-function IBRaidLoot:GetUniqueLootID(link, corpseGUID)
+function IBRaidLoot:GetLootID(link, corpseGUID)
 	return self:GetCorpseID(corpseGUID)..":"..string.gsub(link, "%|h.*$", "")
 end
 

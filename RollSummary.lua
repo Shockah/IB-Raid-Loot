@@ -22,7 +22,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	Frame:SetMovable(true)
 	Frame:SetScript("OnHide", function(self)
 		local lootObj = IBRaidLoot:GetCurrentRollSummaryLoot()
-		if lootObj["pruneAt"] and GetTime() >= lootObj["pruneAt"] then
+		if lootObj and lootObj["pruneAt"] and GetTime() >= lootObj["pruneAt"] then
 			IBRaidLoot:RemoveLoot(lootObj)
 		end
 	end)
@@ -159,7 +159,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	return Frame
 end
 
-function IBRaidLoot:UpdateRollSummaryFrameForLoot(uniqueLootID)
+function IBRaidLoot:UpdateRollSummaryFrameForLoot(lootID)
 	if Frame == nil or not Frame:IsVisible() then
 		return
 	end
@@ -169,7 +169,7 @@ function IBRaidLoot:UpdateRollSummaryFrameForLoot(uniqueLootID)
 		return
 	end
 
-	if lootObj["uniqueLootID"] == uniqueLootID then
+	if lootObj["lootID"] == lootID then
 		self:UpdateRollSummaryFrame()
 	end
 end
@@ -180,7 +180,14 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 	end
 
 	local lootObj = self:GetCurrentRollSummaryLoot()
+	if not lootObj then
+		Frame:Hide()
+		return
+	end
 	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
+	if not iName then
+		return
+	end
 
 	Frame.icon.icon:SetTexture(iTexture)
 	Frame.icon:SetScript("OnEnter", function(self)
@@ -380,8 +387,8 @@ end
 
 function IBRaidLoot:GoToFirstUnassigned()
 	for i = 1, #currentLootIDs do
-		local uniqueLootID = currentLootIDs[i]
-		local lootObj = currentLoot[uniqueLootID]
+		local lootID = currentLootIDs[i]
+		local lootObj = currentLoot[lootID]
 		if #(lootObj["players"]) < lootObj["quantity"] then
 			currentIndex = currentIndex + 1
 			self:UpdateRollSummaryFrame()

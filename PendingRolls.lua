@@ -47,8 +47,8 @@ end
 
 function IBRaidLoot:CreatePendingRollsItemFrames(closeIfNoItems)
 	local hasItems = false
-	for _, uniqueLootID in pairs(currentLootIDs) do
-		local lootObj = currentLoot[uniqueLootID]
+	for _, lootID in pairs(currentLootIDs) do
+		local lootObj = currentLoot[lootID]
 		if self:AmIOnRollListForItem(lootObj) and not self:DidRollOnItem(lootObj) then
 			self:CreatePendingRollsItemFrame(lootObj)
 			hasItems = true
@@ -180,6 +180,9 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 	end
 
 	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
+	if not iName then
+		return
+	end
 
 	if GetTime() < lootObj["timeoutEnd"] then
 		f:SetScript("OnUpdate", function(self, elapsed)
@@ -260,15 +263,15 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				rollObj["type"] = obj["type"]
 
 				local sendObj = {}
-				sendObj["uniqueLootID"] = lootObj["uniqueLootID"]
+				sendObj["lootID"] = lootObj["lootID"]
 				sendObj["type"] = rollObj["type"]
 
 				if IBRaidLoot:IsMasterLooter() then
 					if RollTypes[rollObj["type"]]["shouldRoll"] then
 						rollObj["value"] = random(100)
 						sendObj["value"] = rollObj["value"]
-						sendObj["player"] = player
 					end
+					sendObj["player"] = player
 					IBRaidLoot:CommMessage("RollResponse", sendObj, "RAID")
 				else
 					IBRaidLoot:CommMessage("Roll", sendObj, "RAID")
@@ -279,7 +282,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 					IBRaidLoot:CreateRollSummaryFrame()
 				end
 				IBRaidLoot:UpdatePendingRollsFrame(true)
-				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj["uniqueLootID"])
+				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj["lootID"])
 			end)
 		end
 	end
