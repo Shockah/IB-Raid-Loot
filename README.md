@@ -11,5 +11,5 @@ Planned features:
 * settings interface
 * possibly custom roll types? not sure about this one
 
-Curse: https://mods.curse.com/addons/wow/ib-raid-loot
+Curse: https://mods.curse.com/addons/wow/ib-raid-loot  
 CurseForge: http://wow.curseforge.com/addons/ib-raid-loot/
