@@ -729,8 +729,10 @@ function IBRaidLoot:SortRolls(rolls)
 			return aTypeObj["order"] < bTypeObj["order"]
 		else
 			if aTypeObj["shouldRoll"] then
-				if a["value"] ~= b["value"] then
-					return a["value"] > b["value"]
+				local aVal = a["value"] or 0
+				local bVal = b["value"] or 0
+				if aVal ~= vVal then
+					return aVal > bVal
 				else
 					return a["player"] < b["player"]
 				end

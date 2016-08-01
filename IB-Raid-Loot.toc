@@ -1,7 +1,7 @@
 ## Interface: 70000
 ## Title: IB-Raid-Loot
 ## Notes: Raid loot distribution addon used by the EU Ghostlands/Dragonblight Alliance guild Innocent Bystanders.
-## Version: r1
+## Version: r3
 ## SavedVariables: IBRaidLootDB
 ## SavedVariablesPerCharacter: IBRaidLootCharDB
 ## Author: Shockah-Ghostlands-EU
