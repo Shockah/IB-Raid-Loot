@@ -58,8 +58,8 @@ function IBRaidLoot:CreatePendingRollsFrame()
 	ItemsFrame:SetWidth(fScroll:GetWidth())
 	ItemsFrame:SetPoint("TOPLEFT", 0, 0)
 	fScroll:SetScrollChild(ItemsFrame)
-	ItemsFrame.subframeCount = 0
-	ItemsFrame.subframes = {}
+	ItemsFrame.subframes = 0
+	ItemsFrame.subframeCache = {}
 	ItemsFrame:Show()
 
 	return Frame
