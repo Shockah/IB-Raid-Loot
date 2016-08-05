@@ -46,7 +46,7 @@ IBRaidLootSettings = {
 		},
 		{
 			type = "No response",
-			button = true,
+			button = false,
 			textureUp = [[Interface\COMMON\icon-noloot]],
 			shouldRoll = false
 		},
@@ -60,7 +60,7 @@ IBRaidLootSettings = {
 		},
 		{
 			type = "Pending",
-			button = true,
+			button = false,
 			textureUp = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Up]],
 			textureDown = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Down]],
 			textureHighlight = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Highlight]],
