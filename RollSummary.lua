@@ -210,7 +210,7 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 		if next(lootObj.players) == nil then
 			Frame.quantity:SetText(lootObj.quantity)
 		else
-			Frame.quantity:SetText((#(lootObj.players)).."/"..lootObj.quantity)
+			Frame.quantity:SetText(#lootObj.players.."/"..lootObj.quantity)
 		end
 	end
 
@@ -391,7 +391,7 @@ function IBRaidLoot:GoToFirstUnassigned()
 	for i = 1, #currentLootIDs do
 		local lootID = currentLootIDs[i]
 		local lootObj = currentLoot[lootID]
-		if #(lootObj.players) < lootObj.quantity then
+		if #lootObj.players < lootObj.quantity then
 			currentIndex = currentIndex + 1
 			self:UpdateRollSummaryFrame()
 			return currentIndex
