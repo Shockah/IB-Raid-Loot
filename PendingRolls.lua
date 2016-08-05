@@ -62,7 +62,6 @@ function IBRaidLoot:CreatePendingRollsFrame()
 	ItemsFrame.subframes = {}
 	ItemsFrame:Show()
 
-	self:CreatePendingRollsItemFrames()
 	return Frame
 end
 
@@ -333,20 +332,6 @@ function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts)
 
 	f:Show()
 	f:GetParent():SetHeight(HEIGHT * i)
-end
-
-function IBRaidLoot:CreatePendingRollsItemFrames(closeIfNoItems)
-	local hasItems = false
-	for _, lootID in pairs(currentLootIDs) do
-		local lootObj = currentLoot[lootID]
-		if self:AmIOnRollListForItem(lootObj) and not self:DidRollOnItem(lootObj) then
-			self:CreatePendingRollsItemFrame(lootObj)
-			hasItems = true
-		end
-	end
-	if not hasItems and closeIfNoItems then
-		Frame:Hide()
-	end
 end
 
 function IBRaidLoot:FreePendingRollsItemFrames()
