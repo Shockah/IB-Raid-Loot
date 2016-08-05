@@ -1,10 +1,10 @@
 local Frame = nil
 local ItemsFrame = nil
 
-local currentLootIDs = IBRaidLootData["currentLootIDs"]
-local currentLoot = IBRaidLootData["currentLoot"]
-local RollTypes = IBRaidLootSettings["RollTypes"]
-local RollTypeList = IBRaidLootSettings["RollTypeList"]
+local currentLootIDs = IBRaidLootData.currentLootIDs
+local currentLoot = IBRaidLootData.currentLoot
+local RollTypes = IBRaidLootSettings.RollTypes
+local RollTypeList = IBRaidLootSettings.RollTypeList
 
 function IBRaidLoot:CreatePendingRollsFrame()
 	if Frame ~= nil then
@@ -82,8 +82,8 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f:SetHeight(HEIGHT + BORDER_FIX * 2)
 		f:SetPoint("TOPLEFT", -BORDER_FIX, -HEIGHT * (i - 1) + BORDER_FIX)
 		f:SetBackdrop({
-			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+			bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]],
+			edgeFile = [[Interface\DialogFrame\UI-DialogBox-Border]],
 			tile = true, tileSize = 16, edgeSize = 16,
 			insets = {left = BORDER_FIX, right = BORDER_FIX, top = BORDER_FIX, bottom = BORDER_FIX}
 		})
@@ -121,7 +121,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		local xx = 0
 		f.rollButtons = {}
 		for _, obj in pairs(RollTypeList) do
-			if obj["button"] then
+			if obj.button then
 				local fButton = CreateFrame("Button", nil, fInner)
 				fButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 				fButton:SetPoint("RIGHT", -(rollButtonCount - xx - 1) * (BUTTON_SIZE + BUTTON_MARGIN) + BUTTON_MARGIN - CHILD_MARGIN, 0)
@@ -134,7 +134,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 
 				local fButtonIcon = fButton:CreateTexture(nil, "ARTWORK")
 				fButtonIcon:SetAllPoints(true)
-				fButtonIcon:SetTexture(obj["textureUp"])
+				fButtonIcon:SetTexture(obj.textureUp)
 				fButton.icon = fButtonIcon
 
 				xx = xx + 1
@@ -151,7 +151,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		f.rollInfos = {}
 		local w = ROLL_INFO_ICON_SIZE + ROLL_INFO_ICON_TEXT_MARGIN + ROLL_INFO_TEXT_SIZE
 		for _, obj in pairs(RollTypeList) do
-			if obj["order"] <= 100 then
+			if obj.order <= 100 then
 				local fRollInfo = CreateFrame("Frame", nil, fInner)
 				fRollInfo:SetWidth(w)
 				fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
@@ -164,7 +164,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 				local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
 				fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
 				fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
-				fRollInfoIcon:SetTexture(obj["textureUp"])
+				fRollInfoIcon:SetTexture(obj.textureUp)
 				fRollInfo.icon = fRollInfoIcon
 
 				local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -179,16 +179,16 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		end
 	end
 
-	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
+	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj.link)
 	if not iName then
 		return
 	end
 
-	if GetTime() < lootObj["timeoutEnd"] then
+	if GetTime() < lootObj.timeoutEnd then
 		f:SetScript("OnUpdate", function(self, elapsed)
 			local time = GetTime()
-			local timeMin = lootObj["timeoutStart"]
-			local timeMax = lootObj["timeoutEnd"]
+			local timeMin = lootObj.timeoutStart
+			local timeMax = lootObj.timeoutEnd
 			local v = (time - timeMin) / (timeMax - timeMin)
 			v = math.min(math.max(v, 0), 1)
 			local v2 = 1 - v
@@ -205,20 +205,20 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 	f.icon.icon:SetTexture(iTexture)
 	f.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
-		GameTooltip:SetHyperlink(lootObj["link"])
+		GameTooltip:SetHyperlink(lootObj.link)
 	end)
 	f.icon:SetScript("OnClick", function(self)
 		if IsControlKeyDown() then
-			DressUpItemLink(lootObj["link"])
+			DressUpItemLink(lootObj.link)
 		elseif IsShiftKeyDown() then
-			IBRaidLoot:InsertInChatEditbox(lootObj["link"])
+			IBRaidLoot:InsertInChatEditbox(lootObj.link)
 		end
 	end)
 
-	if lootObj["quantity"] == 1 then
+	if lootObj.quantity == 1 then
 		f.quantity:SetText("")
 	else
-		f.quantity:SetText(lootObj["quantity"])
+		f.quantity:SetText(lootObj.quantity)
 	end
 
 	local r, g, b = GetItemQualityColor(iQuality)
@@ -227,29 +227,29 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 
 	local index = 0
 	for _, obj in pairs(RollTypeList) do
-		if obj["button"] then
+		if obj.button then
 			index = index + 1
 			local fButton = f.rollButtons[index]
 			fButton:SetScript("OnEnter", function(self)
 				if not self.isMouseDown then
-					self.icon:SetTexture(obj["textureHighlight"])
+					self.icon:SetTexture(obj.textureHighlight)
 				end
 				GameTooltip:SetOwner(self, "ANCHOR_LEFT");
-				GameTooltip:SetText(obj["type"])
+				GameTooltip:SetText(obj.type)
 			end)
 			fButton:SetScript("OnLeave", function(self)
 				if not self.isMouseDown then
-					self.icon:SetTexture(obj["textureUp"])
+					self.icon:SetTexture(obj.textureUp)
 				end
 				GameTooltip:Hide()
 			end)
 			fButton:SetScript("OnMouseDown", function(self)
-				self.icon:SetTexture(obj["textureDown"])
+				self.icon:SetTexture(obj.textureDown)
 				GameTooltip:Hide()
 				self.isMouseDown = true
 			end)
 			fButton:SetScript("OnMouseUp", function(self)
-				self.icon:SetTexture(obj["textureUp"])
+				self.icon:SetTexture(obj.textureUp)
 				GameTooltip:Hide()
 				self.isMouseDown = false
 			end)
@@ -259,19 +259,19 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 					player = player.."-"..GetRealmName()
 				end
 
-				local rollObj = lootObj["rolls"][player]
-				rollObj["type"] = obj["type"]
+				local rollObj = lootObj.rolls[player]
+				rollObj.type = obj.type
 
 				local sendObj = {}
-				sendObj["lootID"] = lootObj["lootID"]
-				sendObj["type"] = rollObj["type"]
+				sendObj.lootID = lootObj.lootID
+				sendObj.type = rollObj.type
 
 				if IBRaidLoot:IsMasterLooter() then
-					if RollTypes[rollObj["type"]]["shouldRoll"] then
-						rollObj["value"] = random(100)
-						sendObj["value"] = rollObj["value"]
+					if RollTypes[rollObj.type].shouldRoll then
+						rollObj.value = random(100)
+						sendObj.value = rollObj.value
 					end
-					sendObj["player"] = player
+					sendObj.player = player
 					IBRaidLoot:CommMessage("RollResponse", sendObj, "RAID")
 				else
 					IBRaidLoot:CommMessage("Roll", sendObj, "RAID")
@@ -282,28 +282,28 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 					IBRaidLoot:CreateRollSummaryFrame()
 				end
 				IBRaidLoot:UpdatePendingRollsFrame(true)
-				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj["lootID"])
+				IBRaidLoot:UpdateRollSummaryFrameForLoot(lootObj.lootID)
 			end)
 		end
 	end
 
 	index = 0
 	for _, obj in pairs(RollTypeList) do
-		if obj["order"] <= 100 then
+		if obj.order <= 100 then
 			index = index + 1
 			local fRollInfo = f.rollInfos[index]
-			local rolls = self:GetRollsOfType(lootObj, obj["type"])
+			local rolls = self:GetRollsOfType(lootObj, obj.type)
 			self:SortRolls(rolls)
 			fRollInfo.text:SetText(#rolls)
 			fRollInfo:SetScript("OnEnter", function(self)
 				GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 				GameTooltip:ClearLines()
-				GameTooltip:AddLine(obj["type"])
+				GameTooltip:AddLine(obj.type)
 				for _, rollObj in pairs(rolls) do
-					if RollTypes[rollObj["type"]]["shouldRoll"] then
-						GameTooltip:AddDoubleLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""), rollObj["value"])
+					if RollTypes[rollObj.type].shouldRoll then
+						GameTooltip:AddDoubleLine(string.gsub(rollObj.player, "%-"..GetRealmName(), ""), rollObj.value)
 					else
-						GameTooltip:AddLine(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+						GameTooltip:AddLine(string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
 					end
 				end
 				GameTooltip:Show()
@@ -336,7 +336,7 @@ end
 function IBRaidLoot:GetRollTypeButtonCount()
 	local buttons = 0
 	for _, obj in pairs(RollTypeList) do
-		if obj["button"] then
+		if obj.button then
 			buttons = buttons + 1
 		end
 	end

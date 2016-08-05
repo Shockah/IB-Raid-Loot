@@ -2,10 +2,10 @@ local Frame = nil
 local LinesFrame = nil
 local currentIndex = 1
 
-local currentLootIDs = IBRaidLootData["currentLootIDs"]
-local currentLoot = IBRaidLootData["currentLoot"]
-local RollTypes = IBRaidLootSettings["RollTypes"]
-local RollTypeList = IBRaidLootSettings["RollTypeList"]
+local currentLootIDs = IBRaidLootData.currentLootIDs
+local currentLoot = IBRaidLootData.currentLoot
+local RollTypes = IBRaidLootSettings.RollTypes
+local RollTypeList = IBRaidLootSettings.RollTypeList
 
 function IBRaidLoot:CreateRollSummaryFrame()
 	if Frame ~= nil then
@@ -22,7 +22,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	Frame:SetMovable(true)
 	Frame:SetScript("OnHide", function(self)
 		local lootObj = IBRaidLoot:GetCurrentRollSummaryLoot()
-		if lootObj and lootObj["pruneAt"] and GetTime() >= lootObj["pruneAt"] then
+		if lootObj and lootObj.pruneAt and GetTime() >= lootObj.pruneAt then
 			IBRaidLoot:RemoveLoot(lootObj)
 		end
 	end)
@@ -122,14 +122,14 @@ function IBRaidLoot:CreateRollSummaryFrame()
 	fRollValueText:SetJustifyH("LEFT")
 	fRollValueText:SetText("Roll")
 
-	StaticPopupDialogs["IBRaidLoot_RollSummary_GiveLoot_Confirm"] = {
+	StaticPopupDialogs.IBRaidLoot_RollSummary_GiveLoot_Confirm = {
 		text = "Are you sure you want to give this item to %s?",
 		button1 = ACCEPT,
 		button2 = CANCEL,
 		OnAccept = function(self, data)
-			local rollObj = data["rollObj"]
-			local lootObj = data["lootObj"]
-			IBRaidLoot:GiveMasterLootItem(rollObj["player"], lootObj, function(msg)
+			local rollObj = data.rollObj
+			local lootObj = data.lootObj
+			IBRaidLoot:GiveMasterLootItem(rollObj.player, lootObj, function(msg)
 				if msg then
 					StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Error", msg)
 				else
@@ -146,7 +146,7 @@ function IBRaidLoot:CreateRollSummaryFrame()
 		showAlert = true
 	}
 
-	StaticPopupDialogs["IBRaidLoot_RollSummary_GiveLoot_Error"] = {
+	StaticPopupDialogs.IBRaidLoot_RollSummary_GiveLoot_Error = {
 		text = "%s",
 		button1 = OKAY,
 		timeout = 30,
@@ -169,7 +169,7 @@ function IBRaidLoot:UpdateRollSummaryFrameForLoot(lootID)
 		return
 	end
 
-	if lootObj["lootID"] == lootID then
+	if lootObj.lootID == lootID then
 		self:UpdateRollSummaryFrame()
 	end
 end
@@ -184,7 +184,7 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 		Frame:Hide()
 		return
 	end
-	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj["link"])
+	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj.link)
 	if not iName then
 		return
 	end
@@ -192,23 +192,23 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 	Frame.icon.icon:SetTexture(iTexture)
 	Frame.icon:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
-		GameTooltip:SetHyperlink(lootObj["link"])
+		GameTooltip:SetHyperlink(lootObj.link)
 	end)
 	Frame.icon:SetScript("OnClick", function(self)
 		if IsControlKeyDown() then
-			DressUpItemLink(lootObj["link"])
+			DressUpItemLink(lootObj.link)
 		elseif IsShiftKeyDown() then
-			IBRaidLoot:InsertInChatEditbox(lootObj["link"])
+			IBRaidLoot:InsertInChatEditbox(lootObj.link)
 		end
 	end)
 
-	if lootObj["quantity"] == 1 then
+	if lootObj.quantity == 1 then
 		Frame.quantity:SetText("")
 	else
-		if next(lootObj["players"]) == nil then
-			Frame.quantity:SetText(lootObj["quantity"])
+		if next(lootObj.players) == nil then
+			Frame.quantity:SetText(lootObj.quantity)
 		else
-			Frame.quantity:SetText((#(lootObj["players"])).."/"..lootObj["quantity"])
+			Frame.quantity:SetText((#(lootObj.players)).."/"..lootObj.quantity)
 		end
 	end
 
@@ -221,11 +221,11 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 	Frame.prevButton:SetEnabled(currentIndex > 1)
 	Frame.nextButton:SetEnabled(currentIndex < self:sizeof(currentLootIDs))
 
-	if not self:DidEveryoneRollOnItem(lootObj) and GetTime() < lootObj["timeoutEnd"] then
+	if not self:DidEveryoneRollOnItem(lootObj) and GetTime() < lootObj.timeoutEnd then
 		Frame:SetScript("OnUpdate", function(self, elapsed)
 			local time = GetTime()
-			local timeMin = lootObj["timeoutStart"]
-			local timeMax = lootObj["timeoutEnd"]
+			local timeMin = lootObj.timeoutStart
+			local timeMax = lootObj.timeoutEnd
 			local v = (time - timeMin) / (timeMax - timeMin)
 			v = math.min(math.max(v, 0), 1)
 			local v2 = 1 - v
@@ -295,12 +295,12 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f.rollValueText = fRollValueText
 	end
 
-	if self:contains(lootObj["players"], rollObj["player"]) then
+	if self:contains(lootObj.players, rollObj.player) then
 		f.highlight:SetColorTexture(0, 1, 0, 0.35)
 		f:SetScript("OnEnter", nil)
 		f:SetScript("OnLeave", nil)
 		f.highlight:Show()
-	elseif #(lootObj["players"]) == lootObj["quantity"] then
+	elseif #(lootObj.players) == lootObj.quantity then
 		f.highlight:SetColorTexture(1, 1, 1, 0.2)
 		f:SetScript("OnEnter", nil)
 		f:SetScript("OnLeave", nil)
@@ -316,28 +316,28 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		end)
 	end
 
-	if #(lootObj["players"]) == lootObj["quantity"] then
+	if #(lootObj.players) == lootObj.quantity then
 		f:SetScript("OnClick", nil)
 	else
 		f:SetScript("OnClick", function(self, button)
 			if IBRaidLoot:IsMasterLooter() then
-				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Confirm", string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
+				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Confirm", string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
 				if dialog then
 					local data = {}
-					data["rollObj"] = rollObj
-					data["lootObj"] = lootObj
+					data.rollObj = rollObj
+					data.lootObj = lootObj
 					dialog.data = data
 				end
 			end
 		end)
 	end
 
-	f.playerText:SetText(string.gsub(rollObj["player"], "%-"..GetRealmName(), ""))
-	f.rollTypeIcon:SetTexture(RollTypes[rollObj["type"]]["textureUp"])
-	f.rollTypeText:SetText(rollObj["type"])
-	if RollTypes[rollObj["type"]]["shouldRoll"] then
-		if rollObj["value"] then
-			f.rollValueText:SetText(rollObj["value"])
+	f.playerText:SetText(string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
+	f.rollTypeIcon:SetTexture(RollTypes[rollObj.type].textureUp)
+	f.rollTypeText:SetText(rollObj.type)
+	if RollTypes[rollObj.type].shouldRoll then
+		if rollObj.value then
+			f.rollValueText:SetText(rollObj.value)
 		else
 			f.rollValueText:SetText("")
 		end
@@ -389,7 +389,7 @@ function IBRaidLoot:GoToFirstUnassigned()
 	for i = 1, #currentLootIDs do
 		local lootID = currentLootIDs[i]
 		local lootObj = currentLoot[lootID]
-		if #(lootObj["players"]) < lootObj["quantity"] then
+		if #(lootObj.players) < lootObj.quantity then
 			currentIndex = currentIndex + 1
 			self:UpdateRollSummaryFrame()
 			return currentIndex
