@@ -81,7 +81,7 @@ end
 function ShockahUtils:FindActiveChatEditbox()
 	for i = 1, 10 do
 		local frame = _G["ChatFrame"..i.."EditBox"]
-		if frame:IsVisible() then
+		if frame and frame:IsVisible() then
 			return frame
 		end
 	end
