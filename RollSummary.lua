@@ -323,7 +323,7 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 	else
 		f:SetScript("OnClick", function(self, button)
 			if IBRaidLoot:IsMasterLooter() then
-				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Confirm", string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
+				local dialog = StaticPopup_Show("IBRaidLoot_RollSummary_GiveLoot_Confirm", S:GetPlayerNameWithOptionalRealm(rollObj.player))
 				if dialog then
 					local data = {}
 					data.rollObj = rollObj
@@ -334,7 +334,7 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		end)
 	end
 
-	f.playerText:SetText(string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
+	f.playerText:SetText(S:GetPlayerNameWithOptionalRealm(rollObj.player))
 	f.rollTypeIcon:SetTexture(RollTypes[rollObj.type].textureUp)
 	f.rollTypeText:SetText(rollObj.type)
 	if RollTypes[rollObj.type].shouldRoll then

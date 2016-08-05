@@ -114,14 +114,9 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
 					end
 				end
 
-				local player = GetUnitName("player", true)
-				if not string.find(player, "-") then
-					player = player.."-"..GetRealmName()
-				end
-
 				local toRemove = {}
 				for lootID, lootObj in pairs(currentLoot) do
-					local rollObj = lootObj.rolls[player]
+					local rollObj = lootObj.rolls[S:GetPlayerNameWithRealm()]
 					if rollObj.type ~= "Pending" then
 						table.insert(toRemove, lootObj)
 					end
@@ -326,9 +321,7 @@ end
 
 function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
 	local one = libCE:Decode(data)
-	if not string.find(sender, "-") then
-		sender = sender.."-"..GetRealmName()
-	end
+	sender = S:GetPlayerNameWithRealm(sender)
 
 	local two, message = libC:Decompress(one)
 	if not two then
@@ -342,11 +335,7 @@ function IBRaidLoot:OnCommReceived(prefix, data, distribution, sender)
 		return
 	end
 
-	local player = GetUnitName("player", true)
-	if not string.find(player, "-") then
-		player = player.."-"..GetRealmName()
-	end
-	if sender == player then
+	if sender == S:GetPlayerNameWithRealm() then
 		return
 	end
 	self:OnCommMessage(final.Type, final.Body, distribution, sender)
@@ -504,21 +493,14 @@ end
 
 function IBRaidLoot:GetLootEligiblePlayers(slotIndex)
 	if IBRaidLootSettings.DEBUG_MODE then
-		local player = GetUnitName("player", true)
-		if not string.find(player, "-") then
-			player = player.."-"..GetRealmName()
-		end
-		return { player }
+		return { S:GetPlayerNameWithRealm() }
 	end
 
 	local players = {}
 	for i = 1, 40 do
 		local player = GetMasterLootCandidate(slotIndex, i)
 		if player ~= nil then
-			if not string.find(player, "-") then
-				player = player.."-"..GetRealmName()
-			end
-			table.insert(players, player)
+			table.insert(players, S:GetPlayerNameWithRealm(player))
 		end
 	end
 	return players
@@ -564,10 +546,7 @@ function IBRaidLoot:FindLootCandidateIndexForPlayer(slotIndex, player)
 	for i = 1, 40 do
 		local candidate = GetMasterLootCandidate(slotIndex, i)
 		if candidate ~= nil then
-			if not string.find(candidate, "-") then
-				candidate = candidate.."-"..GetRealmName()
-			end
-			if candidate == player then
+			if S:GetPlayerNameWithRealm(candidate) == player then
 				return i
 			end
 		end
@@ -641,10 +620,7 @@ function IBRaidLoot:IsMasterLooter_Real()
 end
 
 function IBRaidLoot:AmIOnRollListForItem(lootObj)
-	local player = GetUnitName("player", true)
-	if not string.find(player, "-") then
-		player = player.."-"..GetRealmName()
-	end
+	local player = S:GetPlayerNameWithRealm()
 	for rollPlayer, rollObj in pairs(lootObj.rolls) do
 		if rollPlayer == player then
 			return true
@@ -654,11 +630,7 @@ function IBRaidLoot:AmIOnRollListForItem(lootObj)
 end
 
 function IBRaidLoot:DidRollOnItem(lootObj)
-	local player = GetUnitName("player", true)
-	if not string.find(player, "-") then
-		player = player.."-"..GetRealmName()
-	end
-	local rollObj = lootObj.rolls[player]
+	local rollObj = lootObj.rolls[S:GetPlayerNameWithRealm()]
 	if rollObj == nil then
 		return false
 	end
@@ -667,11 +639,8 @@ function IBRaidLoot:DidRollOnItem(lootObj)
 end
 
 function IBRaidLoot:DidRollOnAllItems()
+	local player = S:GetPlayerNameWithRealm()
 	for lootID, lootObj in pairs(currentLoot) do
-		local player = GetUnitName("player", true)
-		if not string.find(player, "-") then
-			player = player.."-"..GetRealmName()
-		end
 		local rollObj = lootObj.rolls[player]
 		if rollObj and rollObj.type == "Pending" then
 			return false

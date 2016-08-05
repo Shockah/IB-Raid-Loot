@@ -277,11 +277,7 @@ function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts) {
 					self.isMouseDown = false
 				end)
 				fButton:SetScript("OnClick", function(self)
-					local player = GetUnitName("player", true)
-					if not string.find(player, "-") then
-						player = player.."-"..GetRealmName()
-					end
-
+					local player = S:GetPlayerNameWithRealm()
 					local rollObj = lootObj.rolls[player]
 					rollObj.type = obj.type
 
@@ -325,9 +321,9 @@ function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts) {
 				GameTooltip:AddLine(obj.type)
 				for _, rollObj in pairs(rolls) do
 					if RollTypes[rollObj.type].shouldRoll then
-						GameTooltip:AddDoubleLine(string.gsub(rollObj.player, "%-"..GetRealmName(), ""), rollObj.value)
+						GameTooltip:AddDoubleLine(S:GetPlayerNameWithOptionalRealm(rollObj.player), rollObj.value or "")
 					else
-						GameTooltip:AddLine(string.gsub(rollObj.player, "%-"..GetRealmName(), ""))
+						GameTooltip:AddLine(S:GetPlayerNameWithOptionalRealm(rollObj.player))
 					end
 				end
 				GameTooltip:Show()

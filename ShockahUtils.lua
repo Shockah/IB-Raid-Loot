@@ -61,6 +61,20 @@ function ShockahUtils:Contains(table, value)
 end
 
 ------------------------------
+-- players
+------------------------------
+
+function ShockahUtils:GetPlayerNameWithRealm(player)
+	player = player or GetUnitName("player", true)
+	return string.find(player, "-") and player or player.."-"..GetRealmName()
+end
+
+function ShockahUtils:GetPlayerNameWithOptionalRealm(player)
+	player = player or GetUnitName("player", true)
+	return string.gsub(player, "%-"..GetRealmName(), "")
+end
+
+------------------------------
 -- chatbox
 ------------------------------
 
