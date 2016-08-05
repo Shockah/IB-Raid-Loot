@@ -392,7 +392,7 @@ function IBRaidLoot:GoToFirstUnassigned()
 		local lootID = currentLootIDs[i]
 		local lootObj = currentLoot[lootID]
 		if #lootObj.players < lootObj.quantity then
-			currentIndex = currentIndex + 1
+			currentIndex = i
 			self:UpdateRollSummaryFrame()
 			return currentIndex
 		end
