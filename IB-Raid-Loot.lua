@@ -103,7 +103,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("IB-Raid-Loot", {
 	OnClick = function(self, button)
 		if button == "LeftButton" then
 			if not IBRaidLoot:DidRollOnAllItems() then
-				IBRaidLoot:CreatePendingRollsFrame()
+				IBRaidLoot:ShowPendingRollsFrame()
 			end
 		elseif button == "RightButton" then
 			if IsShiftKeyDown() then
@@ -263,12 +263,12 @@ function IBRaidLoot:OnLootOpened()
 					end
 				end
 				if updated then
-					IBRaidLoot:UpdatePendingRollsFrame(true)
+					IBRaidLoot:UpdatePendingRollsFrame(true, false)
 					IBRaidLoot:UpdateRollSummaryFrame()
 				end
 			end, IBRaidLootSettings.ROLL_TIMEOUT)
 		end
-		self:CreatePendingRollsFrame()
+		self:ShowPendingRollsFrame()
 		self:UpdateRollSummaryFrame()
 	end
 end
@@ -311,7 +311,7 @@ function IBRaidLoot:OnLootSlotCleared(event, slotIndex)
 					self:RemoveLoot(lootObj)
 					self:UpdateRollSummaryFrame()
 				end
-				self:UpdatePendingRollsFrame(true)
+				self:UpdatePendingRollsFrame(true, false)
 			end
 		end
 	end
@@ -320,7 +320,7 @@ function IBRaidLoot:OnLootSlotCleared(event, slotIndex)
 end
 
 function IBRaidLoot:OnItemInfoReceived()
-	self:UpdatePendingRollsFrame()
+	self:UpdatePendingRollsFrame(true, false)
 	self:UpdateRollSummaryFrame()
 end
 
@@ -380,7 +380,7 @@ function IBRaidLoot:OnRollsRequestReceived(obj, sender)
 	end
 
 	if not IBRaidLoot:DidRollOnAllItems() then
-		self:CreatePendingRollsFrame()
+		self:ShowPendingRollsFrame()
 	end
 end
 
@@ -410,7 +410,7 @@ function IBRaidLoot:OnRollReceived(obj, sender)
 		end
 	end
 
-	self:UpdatePendingRollsFrame(true)
+	self:UpdatePendingRollsFrame(true, true)
 	self:UpdateRollSummaryFrameForLoot(obj.lootID)
 end
 
@@ -425,7 +425,7 @@ function IBRaidLoot:OnRollResponseReceived(obj, sender)
 	rollObj.type = obj.type
 	rollObj.value = obj.value
 
-	self:UpdatePendingRollsFrame(true)
+	self:UpdatePendingRollsFrame(true, true)
 	self:UpdateRollSummaryFrameForLoot(obj.lootID)
 end
 
@@ -460,7 +460,7 @@ function IBRaidLoot:OnLootGivenManuallyReceived(obj)
 		self:RemoveLoot(lootObj)
 		self:UpdateRollSummaryFrame()
 	end
-	self:UpdatePendingRollsFrame(true)
+	self:UpdatePendingRollsFrame(true, false)
 end
 
 function IBRaidLoot:RemoveLootIfUIHidden(lootObj)
