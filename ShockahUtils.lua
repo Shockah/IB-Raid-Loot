@@ -61,6 +61,36 @@ function ShockahUtils:Contains(table, value)
 end
 
 ------------------------------
+-- items
+------------------------------
+
+function ShockahUtils:ParseItemLink(link)
+	local linkParts = { string.find(itemLink, "|?c?f?f?(%x*)|?H?(.*?)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
+	local itemStringParts = { strsplit(":", linkParts[2]) }
+	return {
+		color = linkParts[1],
+		ID = itemStringParts[2],
+		enchant = itemStringParts[3],
+		gems = {
+			itemStringParts[4],
+			itemStringParts[5],
+			itemStringParts[6],
+			itemStringParts[7]
+		},
+		suffix = itemStringParts[8],
+		unique = itemStringParts[9],
+		linkLevel = itemStringParts[10],
+		specialization = itemStringParts[11],
+		reforge = itemStringParts[12],
+		bonuses = {
+			itemStringParts[13],
+			itemStringParts[14]
+		}
+		name = linkParts[3]
+	}
+end
+
+------------------------------
 -- players
 ------------------------------
 
