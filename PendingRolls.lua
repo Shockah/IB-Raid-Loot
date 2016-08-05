@@ -200,7 +200,7 @@ function IBRaidLoot:ObtainPendingRollsItemFrame(parentFrame)
 	return f
 end
 
-function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts) {
+function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts)
 	local iName, _, iQuality, _, _, _, _, _, _, iTexture, _ = GetItemInfo(lootObj.link)
 	if not iName then
 		return
@@ -333,7 +333,7 @@ function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts) {
 
 	f:Show()
 	f:GetParent():SetHeight(HEIGHT * i)
-}
+end
 
 function IBRaidLoot:CreatePendingRollsItemFrames(closeIfNoItems)
 	local hasItems = false
