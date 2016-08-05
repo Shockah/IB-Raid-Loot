@@ -85,7 +85,7 @@ function ShockahUtils:ParseItemLink(link)
 		bonuses = {
 			itemStringParts[13],
 			itemStringParts[14]
-		}
+		},
 		name = linkParts[3]
 	}
 end
