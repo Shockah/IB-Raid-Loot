@@ -1,3 +1,5 @@
+local S = LibStub("ShockahUtils")
+
 local Frame = nil
 local ItemsFrame = nil
 
@@ -211,7 +213,7 @@ function IBRaidLoot:CreatePendingRollsItemFrame(lootObj)
 		if IsControlKeyDown() then
 			DressUpItemLink(lootObj.link)
 		elseif IsShiftKeyDown() then
-			IBRaidLoot:InsertInChatEditbox(lootObj.link)
+			S:InsertInChatEditbox(lootObj.link)
 		end
 	end)
 

@@ -9,7 +9,10 @@
 # Embedded Ace 3.0 Libraries
 embeds.xml
 
-# Load Main Libraries
+# Custom libs
+ShockahUtils.lua
+
+# Addon code
 IB-Raid-Loot.lua
 PendingRolls.lua
 RollSummary.lua

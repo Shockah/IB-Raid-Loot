@@ -3,6 +3,7 @@ local lwin = LibStub("LibWindow-1.1")
 if not IBRaidLootDB then
 	IBRaidLootDB = {}
 end
+local S = LibStub("ShockahUtils")
 
 IBRaidLootSettings = {
 	DEBUG = false,
@@ -230,7 +231,7 @@ function IBRaidLoot:OnLootOpened()
 					currentLoot[lootID] = lootObj
 					table.insert(newLoot, lootObj)
 					table.insert(newLootIDs, lootID)
-				elseif self:contains(newLootIDs, lootID) then
+				elseif S:Contains(newLootIDs, lootID) then
 					lootObj = currentLoot[lootID]
 					lootObj.quantity = lootObj.quantity + 1
 				end
@@ -478,7 +479,7 @@ function IBRaidLoot:RemoveLoot(lootObj)
 		self:CancelTimer(lootObj.rollTimeoutTimer)
 	end
 	currentLoot[lootID] = nil
-	table.remove(currentLootIDs, self:keyOf(currentLootIDs, lootID))
+	table.remove(currentLootIDs, S:KeyOf(currentLootIDs, lootID))
 end
 
 -------
@@ -753,70 +754,10 @@ function IBRaidLoot:CommMessage(type, obj, distribution, target)
 	IBRaidLoot:SendCommMessage(AceCommPrefix, final, distribution, target, "NORMAL")
 end
 
-function IBRaidLoot:FindActiveChatEditbox()
-	for i = 1, 10 do
-		local frame = _G["ChatFrame"..i.."EditBox"]
-		if frame:IsVisible() then
-			return frame
-		end
-	end
-	return nil
-end
-
-function IBRaidLoot:InsertInChatEditbox(text)
-	local chatEditbox = self:FindActiveChatEditbox()
-	if chatEditbox then
-		chatEditbox:Insert(text)
-	end
-end
-
 function IBRaidLoot:DebugPrint(message)
 	if IBRaidLootSettings["DEBUG"] then
-		if type(message) == "table" then
-			print("IBRaidLoot:")
-			self:tprint(message, 1)
-		else
-			print("IBRaidLoot: "..tostring(message))
-		end
+		S:Dump("IBRaidLoot", message)
 	end
-end
-
-function IBRaidLoot:tprint(tbl, indent)
-	if not indent then
-		indent = 0
-	end
-	for k, v in pairs(tbl) do
-		formatting = string.rep("  ", indent)..k..": "
-		if type(v) == "table" then
-			print(formatting)
-			self:tprint(v, indent + 1)
-		elseif type(v) == 'boolean' then
-			print(formatting..tostring(v))      
-		else
-			print(formatting..v)
-		end
-	end
-end
-
-function IBRaidLoot:sizeof(tbl)
-	local count = 0
-	for _, _ in pairs(tbl) do
-		count = count + 1
-	end
-	return count
-end
-
-function IBRaidLoot:keyOf(tbl, value)
-	for k, v in pairs(tbl) do
-		if v == value then
-			return k
-		end
-	end
-	return nil
-end
-
-function IBRaidLoot:contains(tbl, value)
-	return self:keyOf(tbl, value) ~= nil
 end
 
 function IBRaidLoot:SetupWindowFrame(frame)

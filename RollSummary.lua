@@ -1,3 +1,5 @@
+local S = LibStub("ShockahUtils")
+
 local Frame = nil
 local LinesFrame = nil
 local currentIndex = 1
@@ -198,7 +200,7 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 		if IsControlKeyDown() then
 			DressUpItemLink(lootObj.link)
 		elseif IsShiftKeyDown() then
-			IBRaidLoot:InsertInChatEditbox(lootObj.link)
+			S:InsertInChatEditbox(lootObj.link)
 		end
 	end)
 
@@ -216,10 +218,10 @@ function IBRaidLoot:UpdateRollSummaryFrame()
 	Frame.name:SetText(iName)
 	Frame.name:SetTextColor(r, g, b, 1)
 
-	Frame.indexText:SetText(currentIndex.." / "..self:sizeof(currentLootIDs))
+	Frame.indexText:SetText(currentIndex.." / "..S:Count(currentLootIDs))
 
 	Frame.prevButton:SetEnabled(currentIndex > 1)
-	Frame.nextButton:SetEnabled(currentIndex < self:sizeof(currentLootIDs))
+	Frame.nextButton:SetEnabled(currentIndex < S:Count(currentLootIDs))
 
 	if not self:DidEveryoneRollOnItem(lootObj) and GetTime() < lootObj.timeoutEnd then
 		Frame:SetScript("OnUpdate", function(self, elapsed)
@@ -295,12 +297,12 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		f.rollValueText = fRollValueText
 	end
 
-	if self:contains(lootObj.players, rollObj.player) then
+	if S:Contains(lootObj.players, rollObj.player) then
 		f.highlight:SetColorTexture(0, 1, 0, 0.35)
 		f:SetScript("OnEnter", nil)
 		f:SetScript("OnLeave", nil)
 		f.highlight:Show()
-	elseif #(lootObj.players) == lootObj.quantity then
+	elseif #lootObj.players == lootObj.quantity then
 		f.highlight:SetColorTexture(1, 1, 1, 0.2)
 		f:SetScript("OnEnter", nil)
 		f:SetScript("OnLeave", nil)
@@ -316,7 +318,7 @@ function IBRaidLoot:CreateRollSummaryRollFrame(lootObj, rollObj)
 		end)
 	end
 
-	if #(lootObj.players) == lootObj.quantity then
+	if #lootObj.players == lootObj.quantity then
 		f:SetScript("OnClick", nil)
 	else
 		f:SetScript("OnClick", function(self, button)
