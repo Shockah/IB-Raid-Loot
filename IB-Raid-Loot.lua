@@ -3,7 +3,7 @@ local lwin = LibStub("LibWindow-1.1")
 if not IBRaidLootDB then
 	IBRaidLootDB = {}
 end
-local S = LibStub("ShockahUtils")
+local S = LibStub:GetLibrary("ShockahUtils")
 
 IBRaidLootSettings = {
 	DEBUG = false,

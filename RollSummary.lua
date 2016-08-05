@@ -1,4 +1,4 @@
-local S = LibStub("ShockahUtils")
+local S = LibStub:GetLibrary("ShockahUtils")
 
 local Frame = nil
 local LinesFrame = nil
