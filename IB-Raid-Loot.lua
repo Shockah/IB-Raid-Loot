@@ -61,9 +61,7 @@ IBRaidLootSettings = {
 		{
 			type = "Pending",
 			button = false,
-			textureUp = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Up]],
-			textureDown = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Down]],
-			textureHighlight = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Major-Highlight]],
+			textureUp = [[Interface\AddOns\IB-Raid-Loot\Textures\Roll-Pending-Up]],
 			shouldRoll = false
 		}
 	}

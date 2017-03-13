@@ -75,7 +75,7 @@ function IBRaidLoot:UpdatePendingRollsFrame(closeIfNoItems, onlyRollCounts)
 	for _, lootID in pairs(currentLootIDs) do
 		local lootObj = currentLoot[lootID]
 		if self:AmIOnRollListForItem(lootObj) and not self:DidRollOnItem(lootObj) then
-			local f = self:ObtainPendingRollsItemFrame(ItemsFrame)
+			local f = self:ObtainPendingRollsItemFrame()
 			self:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts)
 			hasItems = true
 		end
@@ -85,18 +85,20 @@ function IBRaidLoot:UpdatePendingRollsFrame(closeIfNoItems, onlyRollCounts)
 	end
 end
 
-function IBRaidLoot:ObtainPendingRollsItemFrame(parentFrame)
-	local i = parentFrame.subframes + 1
-	local f = parentFrame.subframeCache[i]
+function IBRaidLoot:ObtainPendingRollsItemFrame()
+	local i = ItemsFrame.subframes + 1
+	local f = ItemsFrame.subframeCache[i]
+	ItemsFrame.subframes = i
 
 	if f then
+		f:Show()
 		return f
 	end
 
-	f = CreateFrame("Frame", nil, parentFrame)
-	parentFrame.subframes = i
-	parentFrame.subframeCache[i] = f
-	f:SetWidth(parentFrame:GetWidth() + BORDER_FIX * 2)
+	f = CreateFrame("Frame", nil, ItemsFrame)
+	f.subframeIndex = i
+	ItemsFrame.subframeCache[i] = f
+	f:SetWidth(ItemsFrame:GetWidth() + BORDER_FIX * 2)
 	f:SetHeight(HEIGHT + BORDER_FIX * 2)
 	f:SetPoint("TOPLEFT", -BORDER_FIX, -HEIGHT * (i - 1) + BORDER_FIX)
 	f:SetBackdrop({
@@ -112,11 +114,13 @@ function IBRaidLoot:ObtainPendingRollsItemFrame(parentFrame)
 	fInner:SetPoint("CENTER", 0, 0)
 	local availableWidth = fInner:GetWidth()
 
-	local fHighlight = fInner:CreateTexture(nil, "BACKGROUND")
-	fHighlight:SetSize(fInner:GetWidth(), fInner:GetHeight())
-	fHighlight:SetPoint("TOPLEFT", 0, 0)
-	fHighlight:SetColorTexture(1, 1, 1, 0.15)
-	f.highlight = fHighlight
+	if not f.highlight then
+		local fHighlight = fInner:CreateTexture(nil, "BACKGROUND")
+		fHighlight:SetSize(fInner:GetWidth(), fInner:GetHeight())
+		fHighlight:SetPoint("TOPLEFT", 0, 0)
+		fHighlight:SetColorTexture(1, 1, 1, 0.15)
+		f.highlight = fHighlight
+	end
 
 	fIcon = CreateFrame("Button", nil, fInner, "ItemButtonTemplate")
 	fIcon:SetPoint("LEFT", 2, 0)
@@ -169,31 +173,29 @@ function IBRaidLoot:ObtainPendingRollsItemFrame(parentFrame)
 	f.rollInfos = {}
 	local w = ROLL_INFO_ICON_SIZE + ROLL_INFO_ICON_TEXT_MARGIN + ROLL_INFO_TEXT_SIZE
 	for _, obj in pairs(RollTypeList) do
-		if obj.order <= 100 then
-			local fRollInfo = CreateFrame("Frame", nil, fInner)
-			fRollInfo:SetWidth(w)
-			fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
-			fRollInfo:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", CHILD_MARGIN + xx * (w + ROLL_INFO_MARGIN), 4)
-			fRollInfo:SetScript("OnLeave", function(self)
-				GameTooltip:Hide()
-			end)
-			table.insert(f.rollInfos, fRollInfo)
+		local fRollInfo = CreateFrame("Frame", nil, fInner)
+		fRollInfo:SetWidth(w)
+		fRollInfo:SetHeight(ROLL_INFO_ICON_SIZE)
+		fRollInfo:SetPoint("BOTTOMLEFT", fIcon, "BOTTOMRIGHT", CHILD_MARGIN + xx * (w + ROLL_INFO_MARGIN), 4)
+		fRollInfo:SetScript("OnLeave", function(self)
+			GameTooltip:Hide()
+		end)
+		table.insert(f.rollInfos, fRollInfo)
 
-			local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
-			fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
-			fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
-			fRollInfoIcon:SetTexture(obj.textureUp)
-			fRollInfo.icon = fRollInfoIcon
+		local fRollInfoIcon = fInner:CreateTexture(nil, "ARTWORK")
+		fRollInfoIcon:SetSize(ROLL_INFO_ICON_SIZE, ROLL_INFO_ICON_SIZE)
+		fRollInfoIcon:SetPoint("LEFT", fRollInfo, "LEFT", 0, 0)
+		fRollInfoIcon:SetTexture(obj.textureUp)
+		fRollInfo.icon = fRollInfoIcon
 
-			local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-			fRollInfoText:SetWidth(ROLL_INFO_TEXT_SIZE)
-			fRollInfoText:SetHeight(ROLL_INFO_ICON_SIZE)
-			fRollInfoText:SetPoint("LEFT", fRollInfoIcon, "RIGHT", ROLL_INFO_ICON_TEXT_MARGIN, 0)
-			fRollInfoText:SetJustifyH("LEFT")
-			fRollInfo.text = fRollInfoText
+		local fRollInfoText = fInner:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		fRollInfoText:SetWidth(ROLL_INFO_TEXT_SIZE)
+		fRollInfoText:SetHeight(ROLL_INFO_ICON_SIZE)
+		fRollInfoText:SetPoint("LEFT", fRollInfoIcon, "RIGHT", ROLL_INFO_ICON_TEXT_MARGIN, 0)
+		fRollInfoText:SetJustifyH("LEFT")
+		fRollInfo.text = fRollInfoText
 
-			xx = xx + 1
-		end
+		xx = xx + 1
 	end
 
 	return f
@@ -331,7 +333,7 @@ function IBRaidLoot:UpdatePendingRollsItemFrame(f, lootObj, onlyRollCounts)
 	end
 
 	f:Show()
-	f:GetParent():SetHeight(HEIGHT * i)
+	f:GetParent():SetHeight(HEIGHT)
 end
 
 function IBRaidLoot:FreePendingRollsItemFrames()
