@@ -14,5 +14,7 @@ ShockahUtils.lua
 
 # Addon code
 Linnet.lua
+ItemInfoRequest.lua
+Loot.lua
 #PendingRolls.lua
 #RollSummary.lua

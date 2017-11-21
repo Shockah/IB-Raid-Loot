@@ -1,7 +1,7 @@
 local MAJOR, MINOR = "ShockahUtils", 1
-local ShockahUtils = LibStub:NewLibrary(MAJOR, MINOR)
+local Self = LibStub:NewLibrary(MAJOR, MINOR)
 
-if not ShockahUtils then
+if not Self then
 	return
 end
 
@@ -9,7 +9,7 @@ end
 -- debug
 ------------------------------
 
-function ShockahUtils:Dump(prefix, message)
+function Self:Dump(prefix, message)
 	if type(message) == "table" then
 		print(prefix..":")
 		self:DumpTable(message, 1)
@@ -18,7 +18,7 @@ function ShockahUtils:Dump(prefix, message)
 	end
 end
 
-function ShockahUtils:DumpTable(table, indent)
+function Self:DumpTable(table, indent)
 	if not indent then
 		indent = 0
 	end
@@ -39,7 +39,7 @@ end
 -- tables
 ------------------------------
 
-function ShockahUtils:Count(table)
+function Self:Count(table)
 	local count = 0
 	for _, _ in pairs(table) do
 		count = count + 1
@@ -47,7 +47,7 @@ function ShockahUtils:Count(table)
 	return count
 end
 
-function ShockahUtils:KeyOf(table, value)
+function Self:KeyOf(table, value)
 	for k, v in pairs(table) do
 		if v == value then
 			return k
@@ -56,7 +56,7 @@ function ShockahUtils:KeyOf(table, value)
 	return nil
 end
 
-function ShockahUtils:Contains(table, value)
+function Self:Contains(table, value)
 	return self:KeyOf(table, value) ~= nil
 end
 
@@ -64,7 +64,7 @@ end
 -- items
 ------------------------------
 
-function ShockahUtils:ParseItemLink(link)
+function Self:ParseItemLink(link)
 	local linkParts = { string.find(itemLink, "|?c?f?f?(%x*)|?H?(.*?)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
 	local itemStringParts = { strsplit(":", linkParts[2]) }
 	return {
@@ -94,12 +94,12 @@ end
 -- players
 ------------------------------
 
-function ShockahUtils:GetPlayerNameWithRealm(player)
+function Self:GetPlayerNameWithRealm(player)
 	player = player or GetUnitName("player", true)
 	return string.find(player, "-") and player or player.."-"..GetRealmName()
 end
 
-function ShockahUtils:GetPlayerNameWithOptionalRealm(player)
+function Self:GetPlayerNameWithOptionalRealm(player)
 	player = player or GetUnitName("player", true)
 	return string.gsub(player, "%-"..GetRealmName(), "")
 end
@@ -108,7 +108,7 @@ end
 -- chatbox
 ------------------------------
 
-function ShockahUtils:FindActiveChatEditbox()
+function Self:FindActiveChatEditbox()
 	for i = 1, 10 do
 		local frame = _G["ChatFrame"..i.."EditBox"]
 		if frame and frame:IsVisible() then
@@ -118,7 +118,7 @@ function ShockahUtils:FindActiveChatEditbox()
 	return nil
 end
 
-function ShockahUtils:InsertInChatEditbox(text)
+function Self:InsertInChatEditbox(text)
 	local chatEditbox = self:FindActiveChatEditbox()
 	if chatEditbox then
 		chatEditbox:Insert(text)
