@@ -1,42 +1,56 @@
-local Self = Linnet
+--[[
+	ItemInfoRequest
+
+	Properties:
+	* items: table -- table of item IDs/strings/names/links
+	* callback: function -- the callback function to call when all items are available
+]]
+
+local selfAddonName = "Linnet"
+local Self = _G[selfAddonName]
+local S = LibStub:GetLibrary("ShockahUtils")
+
+local prototype = {}
 
 local activeRequests = {}
 
---[[
-	Properties:
-	* items: table --table of item IDs/strings/names/links
-	* callback: function --the callback function to call when all items are available
-]]
-
 local function NewItemInfoRequest(items, callback)
-	local obj = {
-		items = items,
-		callback = callback
-	}
+	local obj = S:Clone(prototype)
+	obj.items = items
+	obj.callback = callback
 	return obj
 end
 
-function Self:HandleItemInfoResponse(itemID)
-	local index, activeRequest
-	for index, activeRequest in pairs(activeRequests) do
-		if IsRequestFinished(activeRequest) then
-			table.remove(activeRequests, index)
-			activeRequest.callback(GetInfosForFinishedRequest(activeRequest))
-			return
+function prototype:IsFinished()
+	for _, item in pairs(self.items) do
+		if not GetItemInfo(item) then
+			return false
 		end
 	end
+	return true
 end
 
-local function GetInfosForFinishedRequest(request)
-	local infos = {}
+function prototype:CallbackOnFinish()
+	self.callback(self:GetItemInfos())
+end
 
-	local item
-	for _, item in pairs(request.items) do
+function prototype:GetItemInfos()
+	local infos = {}
+	for _, item in pairs(self.items) do
 		local itemInfo = { GetItemInfo(item) }
 		infos[item] = itemInfo
 	end
-
 	return infos
+end
+
+function Self:HandleItemInfoResponse(itemID)
+	for index, activeRequest in pairs(activeRequests) do
+		if activeRequest:IsFinished() then
+			table.remove(activeRequests, index)
+			activeRequest:CallbackOnFinish()
+			return
+		end
+	end
 end
 
 function Self:GetItemInfo(items, callback)
@@ -44,7 +58,6 @@ function Self:GetItemInfo(items, callback)
 	local hasAllInfos = true
 	local needsRequest = false
 
-	local item
 	for _, item in pairs(items) do
 		local itemInfo = { GetItemInfo(item) }
 		if itemInfo[1] == nil then
@@ -65,9 +78,7 @@ function Self:GetItemInfo(items, callback)
 end
 
 local function GetActiveRequestForItem(item)
-	local activeRequest
 	for _, activeRequest in pairs(activeRequests) do
-		local activeRequestItem
 		for _, activeRequestItem in pairs(activeRequest.items) do
 			if activeRequestItem == item then
 				return activeRequest

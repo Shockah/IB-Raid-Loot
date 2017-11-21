@@ -10,7 +10,9 @@ end
 ------------------------------
 
 function Self:Dump(prefix, message)
-	if type(message) == "table" then
+	if message == nil then
+		print(prefix..": nil")
+	elseif type(message) == "table" then
 		print(prefix..":")
 		self:DumpTable(message, 1)
 	else
@@ -18,17 +20,17 @@ function Self:Dump(prefix, message)
 	end
 end
 
-function Self:DumpTable(table, indent)
-	if not indent then
-		indent = 0
-	end
-	for k, v in pairs(table) do
+function Self:DumpTable(tbl, indent)
+	indent = indent or 0
+	for k, v in pairs(tbl) do
 		formatting = string.rep("  ", indent)..k..": "
 		if type(v) == "table" then
 			print(formatting)
-			self:Dump(v, indent + 1)
-		elseif type(v) == 'boolean' then
-			print(formatting..tostring(v))      
+			self:DumpTable(v, indent + 1)
+		elseif type(v) == "boolean" then
+			print(formatting..tostring(v))
+		elseif type(v) == "function" then
+			print(formatting.."function")
 		else
 			print(formatting..v)
 		end
@@ -39,16 +41,28 @@ end
 -- tables
 ------------------------------
 
-function Self:Count(table)
+function Self:Clone(prototype)
+	local result = {}
+	for k, v in pairs(prototype) do
+		result[k] = v
+	end
+	return result
+end
+
+function Self:IsEmpty(tbl)
+	return next(tbl) == nil
+end
+
+function Self:Count(tbl)
 	local count = 0
-	for _, _ in pairs(table) do
+	for _, _ in pairs(tbl) do
 		count = count + 1
 	end
 	return count
 end
 
-function Self:KeyOf(table, value)
-	for k, v in pairs(table) do
+function Self:KeyOf(tbl, value)
+	for k, v in pairs(tbl) do
 		if v == value then
 			return k
 		end
@@ -56,19 +70,71 @@ function Self:KeyOf(table, value)
 	return nil
 end
 
-function Self:Contains(table, value)
-	return self:KeyOf(table, value) ~= nil
+function Self:Contains(tbl, value)
+	return self:KeyOf(tbl, value) ~= nil
+end
+
+function Self:ContainsMatching(tbl, filterFunction)
+	for _, v in pairs(tbl) do
+		if filterFunction(v) then
+			return true
+		end
+	end
+	return false
+end
+
+function Self:Slice(tbl, firstIndex, length, preserveIndexes)
+	preserveIndexes = preserveIndexes or false
+	local result = {}
+	local lastIndex = firstIndex + length - 1
+
+	if preserveIndexes then
+		for i = firstIndex, lastIndex do
+			result[i] = tbl[i]
+		end
+	else
+		for i = firstIndex, lastIndex do
+			table.insert(result, tbl[i])
+		end
+	end
+
+	return result
+end
+
+function Self:Filter(tbl, filterFunction)
+	local result = {}
+	for _, v in pairs(tbl) do
+		if filterFunction(v) then
+			table.insert(result, v)
+		end
+	end
+	return result
+end
+
+function Self:FilterFirst(tbl, filterFunction)
+	for _, v in pairs(tbl) do
+		if filterFunction(v) then
+			return v
+		end
+	end
+	return nil
+end
+
+function Self:Map(tbl, mapFunction)
+	local result = {}
+	for _, v in pairs(tbl) do
+		table.insert(result, mapFunction(v))
+	end
+	return result
 end
 
 ------------------------------
 -- items
 ------------------------------
 
-function Self:ParseItemLink(link)
-	local linkParts = { string.find(itemLink, "|?c?f?f?(%x*)|?H?(.*?)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
-	local itemStringParts = { strsplit(":", linkParts[2]) }
+function Self:ParseItemString(itemString)
+	local itemStringParts = { strsplit(":", itemString) }
 	return {
-		color = linkParts[1],
 		ID = itemStringParts[2],
 		enchant = itemStringParts[3],
 		gems = {
@@ -85,9 +151,16 @@ function Self:ParseItemLink(link)
 		bonuses = {
 			itemStringParts[13],
 			itemStringParts[14]
-		},
-		name = linkParts[3]
+		}
 	}
+end
+
+function Self:ParseItemLink(link)
+	local linkParts = { string.find(itemLink, "|?c?f?f?(%x*)|?H?(.*?)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
+	local result = self:ParseItemString(linkParts[2])
+	result.color = linkParts[1]
+	result.name = linkParts[3]
+	return result
 end
 
 ------------------------------
