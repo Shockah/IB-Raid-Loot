@@ -18,16 +18,25 @@ function Self:NewLootMessage(loot)
 	return obj
 end
 
-function Self:HandleRawLootMessage(message)
-	HandleLootMessage(message.loot, message.timeout)
-end
-
-local function HandleLootMessage(loot, timeout)
+function Self:HandleLootMessage(message)
+	local loot = S:Map(message.loot, function (loot)
+		return Self:NewLoot(loot.lootID, loot.link, loot.quantity, false)
+	end)
+	
+	for _, lootObj in loot do
+		lootObj:AddToHistory(self.lootHistory, message.timeout)
+	end
 end
 
 function prototype:Send()
 	Self:SendCompressedCommMessage("Loot", {
-		loot = self.loot,
+		loot = S:Map(self.loot, function (loot)
+			return {
+				lootID = loot.lootID,
+				link = loot.link,
+				quantity = loot.quantity,
+			}
+		end),
 		timeout = SelfDB.RollTimeout
 	}, "RAID")
 end

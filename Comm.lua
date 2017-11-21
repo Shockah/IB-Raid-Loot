@@ -33,7 +33,7 @@ end
 
 function Self:OnCommDecompressedReceived(type, obj, distribution, sender)
 	if type == "Loot" then
-		self:HandleRawLootMessage(obj)
+		self:HandleLootMessage(obj)
 	end
 end
 

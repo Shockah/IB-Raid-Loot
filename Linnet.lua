@@ -89,7 +89,7 @@ function Self:OnLootReady()
 					local loot = self.lootHistory:Get(lootID)
 					if not loot then
 						loot = self:NewLoot(lootID, GetLootSlotLink(i), 0)
-						table.insert(self.lootHistory.loot, loot)
+						loot:AddToHistory(self.lootHistory)
 					end
 
 					if loot.isNew then
