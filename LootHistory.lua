@@ -6,12 +6,14 @@
 ]]
 
 local selfAddonName = "Linnet"
-local Self = _G[selfAddonName]
+local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
+Addon.LootHistory = {}
+local Class = Addon.LootHistory
 
-function Self:NewLootHistory()
+function Class:New()
 	local obj = S:Clone(prototype)
 	obj.loot = {}
 	return obj

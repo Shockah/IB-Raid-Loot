@@ -8,13 +8,14 @@
 ]]
 
 local selfAddonName = "Linnet"
-local Self = _G[selfAddonName]
-local SelfDB = _G[selfAddonName.."DB"]
+local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
+Addon.Roll = {}
+local Class = Addon.Roll
 
-function Self:NewRoll(player, type, value)
+function Class:New(player, type, value)
 	local obj = S:Clone(prototype)
 	obj.player = player or S:GetPlayerNameWithRealm(UnitName("player"))
 	obj.type = type

@@ -12,13 +12,15 @@
 ]]
 
 local selfAddonName = "Linnet"
-local Self = _G[selfAddonName]
-local SelfDB = _G[selfAddonName.."DB"]
+local Addon = _G[selfAddonName]
+local DB = _G[selfAddonName.."DB"]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
+Addon.Loot = {}
+local Class = Addon.Loot
 
-function Self:NewLoot(lootID, link, quantity, isNew)
+function Class:New(lootID, link, quantity, isNew)
 	local obj = S:Clone(prototype)
 	obj.lootID = lootID
 	obj.link = link
@@ -39,6 +41,6 @@ function prototype:SetTimeout(timeout)
 end
 
 function prototype:AddToHistory(lootHistory, timeout)
-	self:SetTimeout(timeout or SelfDB.RollTimeout)
+	self:SetTimeout(timeout or DB.RollTimeout)
 	table.insert(lootHistory.loot, self)
 end

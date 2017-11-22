@@ -1,12 +1,12 @@
 local selfAddonName = "Linnet"
 
 Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceComm-3.0", "AceBucket-3.0", "AceTimer-3.0")
-local Self = _G[selfAddonName]
+local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 --local LibWindow = LibStub("LibWindow-1.1")
 
-Self.Settings = {
+Addon.Settings = {
 	Debug = {
 		Settings = true,
 		Messages = true,
@@ -27,18 +27,18 @@ if not _G[selfAddonName.."DB"] then
 		},
 	}
 end
-local SelfDB = _G[selfAddonName.."DB"]
+local DB = _G[selfAddonName.."DB"]
 
-if Self.Settings.Debug.Settings then
-	SelfDB.RollTimeout = 30
-	SelfDB.QualityThreshold = LE_ITEM_QUALITY_POOR
+if Addon.Settings.Debug.Settings then
+	DB.RollTimeout = 30
+	DB.QualityThreshold = LE_ITEM_QUALITY_POOR
 end
 
 local isLootWindowOpen = false
 local lootCache = nil
 
-function Self:OnInitialize()
-	self.lootHistory = self:NewLootHistory()
+function Addon:OnInitialize()
+	self.lootHistory = self.LootHistory:New()
 
 	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", "OnItemInfoReceived")
 	self:RegisterBucketEvent("LOOT_READY", self.Settings.LootReadyBucketPeriod, "OnLootReady")
@@ -47,16 +47,16 @@ function Self:OnInitialize()
 	self:RegisterComm(self.Settings.AceCommPrefix)
 end
 
-function Self:OnDisable()
+function Addon:OnDisable()
 	self:UnregisterAllEvents()
 end
 
-function Self:OnItemInfoReceived(event, itemID)
-	self:HandleItemInfoResponse(itemID)
+function Addon:OnItemInfoReceived(event, itemID)
+	self.ItemInfoRequest:HandleItemInfoResponse(itemID)
 end
 
-function Self:IsMasterLooter()
-	if Self.Settings.Debug.AlwaysMasterLooter then
+function Addon:IsMasterLooter()
+	if self.Settings.Debug.AlwaysMasterLooter then
 		return true
 	end
 
@@ -68,7 +68,7 @@ function Self:IsMasterLooter()
 	return lootMethod == "master" and partyMaster == 0
 end
 
-function Self:OnLootReady()
+function Addon:OnLootReady()
 	isLootWindowOpen = true
 	if not self:IsMasterLooter() then
 		return
@@ -81,14 +81,14 @@ function Self:OnLootReady()
 		if GetLootSlotType(i) == LOOT_SLOT_ITEM then
 			local texture, item, quantity, quality = GetLootSlotInfo(i)
 
-			if quality >= SelfDB.QualityThreshold and quantity == 1 then
+			if quality >= DB.QualityThreshold and quantity == 1 then
 				local lootID = self:LootIDForLootFrameSlot(i)
 				if lootID then
 					-- looted item is valid for rolling
 
 					local loot = self.lootHistory:Get(lootID)
 					if not loot then
-						loot = self:NewLoot(lootID, GetLootSlotLink(i), 0)
+						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
 						loot:AddToHistory(self.lootHistory)
 					end
 
@@ -103,18 +103,18 @@ function Self:OnLootReady()
 
 	local newLoot = self.lootHistory:GetAllNew()
 	if not S:IsEmpty(newLoot) then
-		self:NewLootMessage(newLoot):Send()
+		self.LootMessage:New(newLoot):Send()
 		for _, loot in pairs(newLoot) do
 			loot.isNew = false
 		end
 	end
 end
 
-function Self:OnLootClosed()
+function Addon:OnLootClosed()
 	isLootWindowOpen = false
 end
 
-function Self:CacheLootIDs()
+function Addon:CacheLootIDs()
 	local cache = {}
 	if not isLootWindowOpen then
 		return cache
@@ -133,7 +133,7 @@ local function GetCorpseID(corpseGuid)
 	return mobID..":"..spawnID
 end
 
-function Self:LootIDForLootFrameSlot(lootSlotIndex)
+function Addon:LootIDForLootFrameSlot(lootSlotIndex)
 	local corpseGuid = GetLootSourceInfo(lootSlotIndex)
 	if not corpseGuid then
 		return nil
@@ -142,7 +142,7 @@ function Self:LootIDForLootFrameSlot(lootSlotIndex)
 	return GetCorpseID(corpseGuid)..":"..string.gsub(link, "%|h.*$", "")
 end
 
-function Self:DebugPrint(message)
+function Addon:DebugPrint(message)
 	if self.Settings.Debug.Messages then
 		S:Dump(selfAddonName, message)
 	end

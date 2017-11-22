@@ -6,21 +6,23 @@
 ]]
 
 local selfAddonName = "Linnet"
-local Self = _G[selfAddonName]
-local SelfDB = _G[selfAddonName.."DB"]
+local Addon = _G[selfAddonName]
+local DB = _G[selfAddonName.."DB"]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
+Addon.LootMessage = {}
+local Class = Addon.LootMessage
 
-function Self:NewLootMessage(loot)
+function Class:New(loot)
 	local obj = S:Clone(prototype)
 	obj.loot = {}
 	return obj
 end
 
-function Self:HandleLootMessage(message)
+function Class:Handle(message)
 	local loot = S:Map(message.loot, function (loot)
-		return Self:NewLoot(loot.lootID, loot.link, loot.quantity, false)
+		return Addon.Loot:New(loot.lootID, loot.link, loot.quantity, false)
 	end)
 	
 	for _, lootObj in loot do
@@ -29,7 +31,7 @@ function Self:HandleLootMessage(message)
 end
 
 function prototype:Send()
-	Self:SendCompressedCommMessage("Loot", {
+	Addon:SendCompressedCommMessage("Loot", {
 		loot = S:Map(self.loot, function (loot)
 			return {
 				lootID = loot.lootID,
@@ -37,6 +39,6 @@ function prototype:Send()
 				quantity = loot.quantity,
 			}
 		end),
-		timeout = SelfDB.RollTimeout
+		timeout = DB.RollTimeout
 	}, "RAID")
 end

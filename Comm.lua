@@ -1,6 +1,5 @@
 local selfAddonName = "Linnet"
-local Self = _G[selfAddonName]
-local SelfDB = _G[selfAddonName.."DB"]
+local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local libS = LibStub:GetLibrary("AceSerializer-3.0")
@@ -9,7 +8,7 @@ local libCE = libC:GetAddonEncodeTable()
 
 local nextCommMessageID = 1
 
-function Self:OnCommReceived(prefix, data, distribution, sender)
+function Addon:OnCommReceived(prefix, data, distribution, sender)
 	local one = libCE:Decode(data)
 	sender = S:GetPlayerNameWithRealm(sender)
 
@@ -31,13 +30,13 @@ function Self:OnCommReceived(prefix, data, distribution, sender)
 	self:OnDecompressedCommReceived(final.Type, final.Body, distribution, sender)
 end
 
-function Self:OnCommDecompressedReceived(type, obj, distribution, sender)
+function Addon:OnCommDecompressedReceived(type, obj, distribution, sender)
 	if type == "Loot" then
-		self:HandleLootMessage(obj)
+		self.LootMessage:Handle(obj)
 	end
 end
 
-function Self:SendCompressedCommMessage(type, obj, distribution, target)
+function Addon:SendCompressedCommMessage(type, obj, distribution, target)
 	local message = {}
 	message.Type = type
 	message.ID = nextCommMessageID
