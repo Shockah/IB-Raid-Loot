@@ -41,6 +41,6 @@ function prototype:SetTimeout(timeout)
 end
 
 function prototype:AddToHistory(lootHistory, timeout)
-	self:SetTimeout(timeout or DB.RollTimeout)
+	self:SetTimeout(timeout or DB.Settings.Master.RollTimeout)
 	table.insert(lootHistory.loot, self)
 end

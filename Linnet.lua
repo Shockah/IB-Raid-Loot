@@ -19,19 +19,26 @@ Addon.Settings = {
 
 if not _G[selfAddonName.."DB"] then
 	_G[selfAddonName.."DB"] = {
-		RollTimeout = 120, -- seconds
-		QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
-		AutoProceed = { -- automatically distribute loot when all the rolls are done
-			Enabled = false,
-			OnlyIfEveryoneResponded = true,
+		Settings = {
+			Master = {
+				RollTimeout = 120, -- seconds
+				QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
+				AutoProceed = { -- automatically distribute loot when all the rolls are done
+					Enabled = false,
+					OnlyIfEveryoneResponded = true,
+				},
+			},
+			Raider = {
+				AutoPassUnusable = true, -- automatically pass on unusable loot (plate on a cloth character etc.)
+			},
 		},
 	}
 end
 local DB = _G[selfAddonName.."DB"]
 
 if Addon.Settings.Debug.Settings then
-	DB.RollTimeout = 30
-	DB.QualityThreshold = LE_ITEM_QUALITY_POOR
+	DB.Settings.Master.RollTimeout = 30
+	DB.Settings.Master.QualityThreshold = LE_ITEM_QUALITY_POOR
 end
 
 local isLootWindowOpen = false
@@ -81,7 +88,7 @@ function Addon:OnLootReady()
 		if GetLootSlotType(i) == LOOT_SLOT_ITEM then
 			local texture, item, quantity, quality = GetLootSlotInfo(i)
 
-			if quality >= DB.QualityThreshold and quantity == 1 then
+			if quality >= DB.Settings.Master.QualityThreshold and quantity == 1 then
 				local lootID = self:LootIDForLootFrameSlot(i)
 				if lootID then
 					-- looted item is valid for rolling

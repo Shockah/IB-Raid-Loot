@@ -39,6 +39,6 @@ function prototype:Send()
 				quantity = loot.quantity,
 			}
 		end),
-		timeout = DB.RollTimeout
+		timeout = DB.Settings.Master.RollTimeout
 	}, "RAID")
 end
