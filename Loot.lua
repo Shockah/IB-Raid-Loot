@@ -13,7 +13,6 @@
 
 local selfAddonName = "Linnet"
 local Addon = _G[selfAddonName]
-local DB = _G[selfAddonName.."DB"]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
@@ -41,6 +40,13 @@ function prototype:SetTimeout(timeout)
 end
 
 function prototype:AddToHistory(lootHistory, timeout)
-	self:SetTimeout(timeout or DB.Settings.Master.RollTimeout)
+	self:SetTimeout(timeout or Addon.DB.Settings.Master.RollTimeout)
 	table.insert(lootHistory.loot, self)
+end
+
+function prototype:GetAvailableRollTypes()
+	local rollTypes = S:Clone(Addon.DB.Settings.Master.RollTypes.Set)
+	table.insert(rollTypes, "Disenchant")
+	table.insert(rollTypes, "Pass")
+	return rollTypes
 end

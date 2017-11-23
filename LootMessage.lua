@@ -7,7 +7,6 @@
 
 local selfAddonName = "Linnet"
 local Addon = _G[selfAddonName]
-local DB = _G[selfAddonName.."DB"]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
@@ -39,6 +38,6 @@ function prototype:Send()
 				quantity = loot.quantity,
 			}
 		end),
-		timeout = DB.Settings.Master.RollTimeout
+		timeout = Addon.DB.Settings.Master.RollTimeout
 	}, "RAID")
 end

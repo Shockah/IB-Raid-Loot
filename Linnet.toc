@@ -15,9 +15,14 @@ ShockahUtils.lua
 # Addon code
 Linnet.lua
 Comm.lua
+RollTypes.lua
 
 ItemInfoRequest.lua
 Loot.lua
 LootHistory.lua
+Roll.lua
 
 LootMessage.lua
+
+PendingFrame.lua
+PendingLootFrame.lua

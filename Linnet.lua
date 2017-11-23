@@ -1,7 +1,7 @@
 local selfAddonName = "Linnet"
 
 Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceComm-3.0", "AceBucket-3.0", "AceTimer-3.0")
-local Addon = _G[selfAddonName]
+local Addon = Linnet
 local S = LibStub:GetLibrary("ShockahUtils")
 
 --local LibWindow = LibStub("LibWindow-1.1")
@@ -17,30 +17,6 @@ Addon.Settings = {
 	LootReadyBucketPeriod = 0.2, -- seconds
 }
 
-if not _G[selfAddonName.."DB"] then
-	_G[selfAddonName.."DB"] = {
-		Settings = {
-			Master = {
-				RollTimeout = 120, -- seconds
-				QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
-				AutoProceed = { -- automatically distribute loot when all the rolls are done
-					Enabled = false,
-					OnlyIfEveryoneResponded = true,
-				},
-			},
-			Raider = {
-				AutoPassUnusable = true, -- automatically pass on unusable loot (plate on a cloth character etc.)
-			},
-		},
-	}
-end
-local DB = _G[selfAddonName.."DB"]
-
-if Addon.Settings.Debug.Settings then
-	DB.Settings.Master.RollTimeout = 30
-	DB.Settings.Master.QualityThreshold = LE_ITEM_QUALITY_POOR
-end
-
 local isLootWindowOpen = false
 local lootCache = nil
 
@@ -52,6 +28,45 @@ function Addon:OnInitialize()
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 
 	self:RegisterComm(self.Settings.AceCommPrefix)
+
+	if not _G[selfAddonName.."DB"] then
+		_G[selfAddonName.."DB"] = {
+			Settings = {
+				Master = {
+					RollTimeout = 120, -- seconds
+					QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
+					AutoProceed = { -- automatically distribute loot when all the rolls are done
+						Enabled = false,
+						OnlyIfEveryoneResponded = true,
+					},
+				},
+				Raider = {
+					AutoPassUnusable = true, -- automatically pass on unusable loot (plate on a cloth character etc.)
+					PendingFrame = {
+						Strata = "HIGH",
+						Point = {
+							point = "LEFT",
+							relativeTo = "UIParent",
+							relativePoint = "LEFT",
+							xOffset = 16,
+							yOffset = 0,
+						},
+						Size = { 250, 350 },
+						Cell = {
+							Height = 60,
+							Spacing = -6,
+						},
+					},
+				},
+			},
+		}
+	end
+	self.DB = _G[selfAddonName.."DB"]
+
+	if self.Settings.Debug.Settings then
+		self.DB.Settings.Master.RollTimeout = 30
+		self.DB.Settings.Master.QualityThreshold = LE_ITEM_QUALITY_POOR
+	end
 end
 
 function Addon:OnDisable()
@@ -88,7 +103,7 @@ function Addon:OnLootReady()
 		if GetLootSlotType(i) == LOOT_SLOT_ITEM then
 			local texture, item, quantity, quality = GetLootSlotInfo(i)
 
-			if quality >= DB.Settings.Master.QualityThreshold and quantity == 1 then
+			if quality >= self.DB.Settings.Master.QualityThreshold and quantity == 1 then
 				local lootID = self:LootIDForLootFrameSlot(i)
 				if lootID then
 					-- looted item is valid for rolling
@@ -114,6 +129,10 @@ function Addon:OnLootReady()
 		for _, loot in pairs(newLoot) do
 			loot.isNew = false
 		end
+
+		local pendingFrame = self.PendingFrame:Get()
+		pendingFrame:SetLoot(self.lootHistory.loot)
+		pendingFrame:Show()
 	end
 end
 
@@ -146,7 +165,7 @@ function Addon:LootIDForLootFrameSlot(lootSlotIndex)
 		return nil
 	end
 	local link = GetLootSlotLink(lootSlotIndex)
-	return GetCorpseID(corpseGuid)..":"..string.gsub(link, "%|h.*$", "")
+	return GetCorpseID(corpseGuid)..":"..S:ParseItemLink(link).itemString
 end
 
 function Addon:DebugPrint(message)

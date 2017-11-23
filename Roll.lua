@@ -3,7 +3,7 @@
 
 	Properties:
 	* player: string -- player name with realm
-	* type: string -- "2-set"/"4-set"/"Major"/"Minor"/"Off-spec"/"Transmog"/"Warforged"/"Pass"
+	* type: string -- "Major", "Minor", etc.
 	* value: int -- roll value (1-100)
 ]]
 

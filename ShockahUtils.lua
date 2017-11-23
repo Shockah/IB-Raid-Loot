@@ -31,6 +31,8 @@ function Self:DumpTable(tbl, indent)
 			print(formatting..tostring(v))
 		elseif type(v) == "function" then
 			print(formatting.."function")
+		elseif type(v) == "userdata" then
+			print(formatting.."userdata")
 		else
 			print(formatting..v)
 		end
@@ -42,11 +44,20 @@ end
 ------------------------------
 
 function Self:Clone(prototype)
-	local result = {}
+	return self:CloneInto(prototype, {})
+end
+
+function Self:CloneInto(prototype, tbl)
 	for k, v in pairs(prototype) do
-		result[k] = v
+		tbl[k] = v
 	end
-	return result
+	return tbl
+end
+
+function Self:Clear(tbl)
+	for k in pairs(tbl) do
+		tbl[k] = nil
+	end
 end
 
 function Self:IsEmpty(tbl)
@@ -132,35 +143,26 @@ end
 -- items
 ------------------------------
 
-function Self:ParseItemString(itemString)
-	local itemStringParts = { strsplit(":", itemString) }
-	return {
-		ID = itemStringParts[2],
-		enchant = itemStringParts[3],
-		gems = {
-			itemStringParts[4],
-			itemStringParts[5],
-			itemStringParts[6],
-			itemStringParts[7]
-		},
-		suffix = itemStringParts[8],
-		unique = itemStringParts[9],
-		linkLevel = itemStringParts[10],
-		specialization = itemStringParts[11],
-		reforge = itemStringParts[12],
-		bonuses = {
-			itemStringParts[13],
-			itemStringParts[14]
-		}
-	}
-end
-
 function Self:ParseItemLink(link)
-	local linkParts = { string.find(itemLink, "|?c?f?f?(%x*)|?H?(.*?)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
-	local result = self:ParseItemString(linkParts[2])
-	result.color = linkParts[1]
-	result.name = linkParts[3]
-	return result
+	local linkParts = { string.find(link, "|?c?f?f?(%x*)|?H?([^:]*):?(%d+):?(%d*):?(%d*):?(%d*):?(%d*):?(%d*):?(%-?%d*):?(%-?%d*):?(%d*):?(%d*)|?h?%[?([^%[%]]*)%]?|?h?|?r?") }
+	return {
+		itemString = string.match(link, "item[%-?%d:]+"),
+		color = linkParts[3],
+		linkType = linkParts[4],
+		ID = linkParts[5],
+		enchant = linkParts[6],
+		gems = {
+			linkParts[7],
+			linkParts[8],
+			linkParts[9],
+			linkParts[10],
+		},
+		suffix = linkParts[11],
+		unique = linkParts[12],
+		linkLevel = linkParts[13],
+		reforging = linkParts[14],
+		name = linkParts[15],
+	}
 end
 
 ------------------------------
