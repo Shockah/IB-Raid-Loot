@@ -37,7 +37,7 @@ local rollTypes = {
 		button = true,
 	},
 	{
-		type = "Offspec",
+		type = "Off-spec",
 		description = "The item is an upgrade for another spec.",
 		icon = texturesPath.."\\Roll-Offspec",
 		shouldRoll = true,

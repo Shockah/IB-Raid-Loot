@@ -165,6 +165,9 @@ function Addon:LootIDForLootFrameSlot(lootSlotIndex)
 		return nil
 	end
 	local link = GetLootSlotLink(lootSlotIndex)
+	if not link then
+		return nil
+	end
 	return GetCorpseID(corpseGuid)..":"..S:ParseItemLink(link).itemString
 end
 

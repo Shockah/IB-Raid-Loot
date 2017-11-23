@@ -40,6 +40,22 @@ function Self:DumpTable(tbl, indent)
 end
 
 ------------------------------
+-- strings
+------------------------------
+
+function Self:IsBlankString(str)
+	return str == nil or str == ""
+end
+
+function Self:StringStartsWith(str, prefix)
+	return string.sub(str, 1, string.len(prefix)) == prefix
+end
+
+function Self:StringEndsWith(str, suffix)
+	return suffix == "" or string.sub(str, -string.len(suffix)) == suffix
+end
+
+------------------------------
 -- tables
 ------------------------------
 
@@ -79,6 +95,13 @@ function Self:KeyOf(tbl, value)
 		end
 	end
 	return nil
+end
+
+function Self:RemoveValue(tbl, value)
+	local key = self:KeyOf(tbl, value)
+	if key then
+		table.remove(tbl, key)
+	end
 end
 
 function Self:Contains(tbl, value)
@@ -198,4 +221,81 @@ function Self:InsertInChatEditbox(text)
 	if chatEditbox then
 		chatEditbox:Insert(text)
 	end
+end
+
+------------------------------
+-- tooltip
+------------------------------
+
+local parseableTooltip = nil
+
+function Self:ParseTooltip(setupCallback, parseCallback)
+	if not parseableTooltip then
+		parseableTooltip = CreateFrame("GameTooltip", "ShockahUtilsParseTooltip", UIParent, "GameTooltipTemplate")
+	end
+
+	parseableTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	parseableTooltip:ClearLines()
+	setupCallback(parseableTooltip)
+
+	local result = {
+		left = {},
+		right = {},
+	}
+
+	local continue = true
+	local index = 0
+	while continue do
+		index = index + 1
+		local leftLabel = _G[parseableTooltip:GetName().."TextLeft"..index]
+		local rightLabel = _G[parseableTooltip:GetName().."TextRight"..index]
+
+		if (not leftLabel) and (not rightLabel) then
+			continue = false
+		else
+			local r, g, b
+
+			if leftLabel then
+				r, g, b = leftLabel:GetTextColor()
+			else
+				r, g, b = 1.0, 1.0, 1.0
+			end
+			table.insert(result.left, {
+				text = leftLabel and leftLabel:GetText() or nil,
+				r = r,
+				g = g,
+				b = b,
+			})
+
+			if rightLabel then
+				r, g, b = rightLabel:GetTextColor()
+			else
+				r, g, b = 1.0, 1.0, 1.0
+			end
+			table.insert(result.right, {
+				text = rightLabel and rightLabel:GetText() or nil,
+				r = r,
+				g = g,
+				b = b,
+			})
+		end
+	end
+
+	continue = true
+	while continue do
+		local leftObj = result.left[index] or {}
+		local rightObj = result.right[index] or {}
+
+		if self:IsBlankString(leftObj.text) and self:IsBlankString(rightObj.text) then
+			table.remove(result.left, index)
+			table.remove(result.right, index)
+		else
+			continue = false
+		end
+		index = index - 1
+	end
+
+	local parseResult = { parseCallback(result.left, result.right) }
+	parseableTooltip:Hide()
+	return unpack(parseResult)
 end
