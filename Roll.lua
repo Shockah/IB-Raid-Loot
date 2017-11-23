@@ -22,3 +22,12 @@ function Class:New(player, type, value)
 	obj.value = value
 	return obj
 end
+
+function prototype:AddToTooltip()
+	GameTooltip:AddDoubleLine(
+		S:GetPlayerNameWithOptionalRealm(self.player),
+		self.value,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0
+	)
+end

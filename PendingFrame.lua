@@ -82,7 +82,7 @@ function Class:Get()
 	--frame.resizeButton:Show()
 
 	frame.titleLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	frame.titleLabel:SetPoint("TOP", 0, -4)
+	frame.titleLabel:SetPoint("TOP", 0, -5)
 	frame.titleLabel:SetText("Pending Rolls")
 	frame.titleLabel:SetJustifyV("TOP")
 

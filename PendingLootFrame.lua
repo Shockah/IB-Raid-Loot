@@ -137,8 +137,10 @@ function prototype:SetLoot(loot)
 					if not self.isMouseDown then
 						self.icon:SetTexture(self.rollType.icon.."-Hover")
 					end
-					GameTooltip:SetOwner(self, "ANCHOR_LEFT");
-					GameTooltip:SetText(self.rollType.type)
+					GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+					GameTooltip:ClearLines()
+					rollButton.rollType:AddToTooltip({})
+					GameTooltip:Show()
 				end)
 				rollButton:SetScript("OnLeave", function(self)
 					if not self.isMouseDown then
