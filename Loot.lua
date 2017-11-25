@@ -378,12 +378,12 @@ function prototype:CancelLootAssigning(all)
 	end
 end
 
-function prototype:LootAssigned(all)
+function prototype:LootAssigned(cancelAll)
 	if self.assigned then
 		return
 	end
 
-	self:CancelLootAssigning(all)
+	self:CancelLootAssigning(cancelAll)
 	self:AnnounceWinner(self.assigningTo)
 	self.assigned = self.assigned + 1
 end
@@ -393,22 +393,26 @@ function prototype:AssignLoot(roll)
 		return
 	end
 
-	local lootIndex = self:GetCurrentLootIndex()
-	if not lootIndex then
-		UIErrorsFrame:AddMessage("The item is not available. Is the loot window open?", 1.0, 0.0, 0.0)
-	end
+	if Addon.Settings.Debug.DebugMode then
+		self:LootAssigned()
+	else
+		local lootIndex = self:GetCurrentLootIndex()
+		if not lootIndex then
+			UIErrorsFrame:AddMessage("The item is not available. Is the loot window open?", 1.0, 0.0, 0.0)
+		end
 
-	local candidateIndex = roll:GetCurrentCandidateIndex()
-	if not candidateIndex then
-		UIErrorsFrame:AddMessage("Chosen player is not eligible for loot.", 1.0, 0.0, 0.0)
-	end
+		local candidateIndex = roll:GetCurrentCandidateIndex()
+		if not candidateIndex then
+			UIErrorsFrame:AddMessage("Chosen player is not eligible for loot.", 1.0, 0.0, 0.0)
+		end
 
-	table.insert(self.assigning, {
-		timer = Addon:ScheduleTimer(function()
-			self:CancelLootAssigning()
-			UIErrorsFrame:AddMessage("Unknown error while giving out loot.", 1.0, 0.0, 0.0)
-		end, Addon.Settings.LootAssignTimeout),
-		roll = roll,
-	})
-	GiveMasterLoot(lootIndex, candidateIndex)
+		table.insert(self.assigning, {
+			timer = Addon:ScheduleTimer(function()
+				self:CancelLootAssigning()
+				UIErrorsFrame:AddMessage("Unknown error while giving out loot.", 1.0, 0.0, 0.0)
+			end, Addon.Settings.LootAssignTimeout),
+			roll = roll,
+		})
+		GiveMasterLoot(lootIndex, candidateIndex)
+	end
 end
