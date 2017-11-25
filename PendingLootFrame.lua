@@ -45,6 +45,14 @@ function Class:New(parentFrame)
 		GameTooltip:Hide()
 	end)
 
+	frame.quantityLabel = frame.icon:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	frame.quantityLabel:SetPoint("BOTTOMRIGHT", -2, 2)
+	frame.quantityLabel:SetTextColor(1, 1, 1, 1)
+	frame.quantityLabel:SetJustifyH("RIGHT")
+	frame.quantityLabel:SetJustifyV("BOTTOM")
+	local filename, fontHeight, flags = frame.quantityLabel:GetFont()
+	frame.quantityLabel:SetFont(filename, fontHeight, "OUTLINE")
+
 	frame.container = CreateFrame("Frame", frame:GetName().."Container", frame)
 
 	frame.nameLabel = frame.container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -357,6 +365,17 @@ end
 function prototype:UpdateButtonAppearance()
 	if not self.loot then
 		return
+	end
+
+	if self.loot.quantity == 1 then
+		self.quantityLabel:Hide()
+	else
+		if #self.loot.assigned > 0 and (not self.loot:IsFullyAssigned()) then
+			self.quantityLabel:SetText((#self.loot.assigned).."/"..self.loot.quantity)
+		else
+			self.quantityLabel:SetText(self.loot.quantity)
+		end
+		self.quantityLabel:Show()
 	end
 
 	if self.loot:IsPendingLocalRoll() then

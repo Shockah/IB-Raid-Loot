@@ -8,8 +8,8 @@ local S = LibStub:GetLibrary("ShockahUtils")
 
 Addon.Settings = {
 	Debug = {
-		Messages = true,
-		DebugMode = true,
+		Messages = false,
+		DebugMode = false,
 		QualityThreshold = LE_ITEM_QUALITY_POOR,
 	},
 	AceCommPrefix = "Linnet",
