@@ -262,7 +262,17 @@ function prototype:SetLoot(loot)
 			extraButton:SetPoint("RIGHT", self.container, "RIGHT", -6, -self:GetHeight() / 6)
 		end
 
+		if loot.cacheIsUnusable and (not loot.wasDisplayed) and Addon.DB.Settings.Raider.AutoPassUnusable then
+			if loot:IsPendingLocalRoll() then
+				local localRoll = loot:GetRollForPlayer()
+				localRoll:SetType("Pass")
+
+				localRoll:SendRoll(loot)
+			end
+		end
+
 		self:UpdateButtonAppearance()
+		loot.wasDisplayed = true
 	end)
 end
 

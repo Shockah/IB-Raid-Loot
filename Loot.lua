@@ -6,11 +6,13 @@
 	* link: string -- item link
 	* quantity: int
 	* isNew: bool -- whether this Loot object is still being processed for the first time
+	* wasDisplayed: bool -- whether the item was displayed
 	* rolls: table -- list of rolls
 	* startTime: int -- time the rolling started at
 	* timeout: int -- startTime + timeout to end at
 	* hideRollsUntilFinished: bool -- initially coming from DB.Settings; hide rollers until rolling is finished
 	* cacheIsEquippable: bool -- cached: is item equippable
+	* cacheIsUnusable: bool -- cached: is item unusable (only Off-spec and Pass available)
 	* timeoutTimer: AceTimer ID -- timeout timer
 	* assigning: table -- list of structs:
 		* timer: AceTimer ID -- loot assigning timeout timer
@@ -69,8 +71,10 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.link = link
 	obj.quantity = quantity or 1
 	obj.isNew = (isNew == nil and true or isNew)
+	obj.wasDisplayed = false
 	obj.rolls = {}
 	obj.cacheIsEquippable = false
+	obj.cacheIsUnusable = false
 	obj.hideRollsUntilFinished = Addon.DB.Settings.Master.HideRollsUntilFinished
 	obj.assigning = {}
 	obj.assigned = 0
@@ -249,6 +253,7 @@ function prototype:GetAvailableRollTypes()
 
 			if bindType ~= 0 and bindType ~= 2 then -- 0 = no bind; 2 = BoE
 				S:RemoveValue(rollTypes, "Transmog")
+				self.cacheIsUnusable = true
 			end
 		end
 

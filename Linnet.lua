@@ -8,7 +8,6 @@ local S = LibStub:GetLibrary("ShockahUtils")
 
 Addon.Settings = {
 	Debug = {
-		Settings = true,
 		Messages = true,
 		DebugMode = true,
 		QualityThreshold = LE_ITEM_QUALITY_POOR,
@@ -20,6 +19,7 @@ Addon.Settings = {
 
 local isLootWindowOpen = false
 local lootCache = nil
+local dropdown = nil
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 	type = "launcher",
@@ -31,7 +31,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 			pendingFrame:SetLoot(Addon.lootHistory.loot)
 			pendingFrame:Show()
 		elseif button == "RightButton" then
-			
+			Addon:ShowDropdown(self)
 		end
 	end,
 	OnTooltipShow = function(tt)
@@ -90,11 +90,105 @@ function Addon:OnInitialize()
 	end
 	self.DB = _G[selfAddonName.."DB"]
 
-	if self.Settings.Debug.Settings then
-		self.DB.Settings.Master.RollTimeout = 30
+	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
+end
+
+function Addon:ShowDropdown(frame)
+	if not dropdown then
+		dropdown = CreateFrame("Frame", selfAddonName.."Dropdown", UIParent, "UIDropDownMenuTemplate")
 	end
 
-	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
+	local timeoutValues = {30, 60, 90, 120, 180, 300}
+	local timeoutValueToText = function(value)
+		if value >= 120 then
+			return "Timeout: "..(value / 60).."m"
+		else
+			return "Timeout: "..value.."s"
+		end
+	end
+
+	EasyMenu({
+		{
+			text = "Master Looter",
+			isTitle = true,
+		},
+		{
+			text = timeoutValueToText(self.DB.Settings.Master.RollTimeout),
+			tooltipText = "Time after which rolls timeout automatically if not responded to.",
+			keepShownOnClick = true,
+			func = function(self)
+				local timeoutValues = {30, 60, 90, 120, 180, 300}
+
+				local value = Addon.DB.Settings.Master.RollTimeout
+				local key = S:KeyOf(timeoutValues, value)
+				if not key then
+					key = #timeoutValues
+					value = timeoutValues[key]
+				end
+
+				key = key + 1
+				if key > #timeoutValues then
+					key = 1
+				end
+				value = timeoutValues[key]
+				Addon.DB.Settings.Master.RollTimeout = value
+				Addon:ShowDropdown(frame)
+			end,
+		},
+		{
+			text = "Hide rolls until finished",
+			tooltipText = "Rolls (other than pending) are hidden until everyone rolls or until the timeout.",
+			checked = self.DB.Settings.Master.HideRollsUntilFinished,
+			func = function()
+				self.DB.Settings.Master.HideRollsUntilFinished = not self.DB.Settings.Master.HideRollsUntilFinished
+			end,
+		},
+		{
+			text = "Auto-proceed",
+			tooltipText = "Automatically assign loot after rolling is finished.",
+			checked = self.DB.Settings.Master.AutoProceed.Enabled,
+			func = function()
+				self.DB.Settings.Master.AutoProceed.Enabled = not self.DB.Settings.Master.AutoProceed.Enabled
+			end,
+		},
+		{
+			text = "   Only if everyone responded",
+			tooltipText = "Only automatically assign loot if actually everyone rolled.",
+			checked = self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded,
+			func = function()
+				self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded = not self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded
+			end,
+		},
+		{
+			text = "Announce assignees",
+			tooltipText = "Announce assignees in Raid or Raid Warning chat.",
+			checked = self.DB.Settings.Master.AnnounceWinners.Enabled,
+			func = function()
+				self.DB.Settings.Master.AnnounceWinners.Enabled = not self.DB.Settings.Master.AnnounceWinners.Enabled
+			end,
+		},
+		{
+			text = "   In Raid Warning",
+			tooltipText = "Use the Raid Warning for announcements.",
+			checked = self.DB.Settings.Master.AnnounceWinners.AsRaidWarning,
+			func = function()
+				self.DB.Settings.Master.AnnounceWinners.AsRaidWarning = not self.DB.Settings.Master.AnnounceWinners.AsRaidWarning
+			end,
+		},
+
+		{
+			text = "Raider",
+			isTitle = true,
+		},
+		{
+			text = "Auto-pass unusable",
+			tooltipText = "Automatically pass equippable loot you can't use.",
+			checked = self.DB.Settings.Raider.AutoPassUnusable,
+			func = function()
+				self.DB.Settings.Raider.AutoPassUnusable = not self.DB.Settings.Raider.AutoPassUnusable
+			end,
+		},
+	}, dropdown, frame, 0, 0, "MENU", 2)
 end
 
 function Addon:OnDisable()
