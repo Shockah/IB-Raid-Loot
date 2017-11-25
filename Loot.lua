@@ -9,6 +9,7 @@
 	* rolls: table -- list of rolls
 	* startTime: int -- time the rolling started at
 	* timeout: int -- startTime + timeout to end at
+	* cacheIsEquippable: bool -- cached: is item equippable
 ]]
 
 local selfAddonName = "Linnet"
@@ -63,7 +64,26 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.quantity = quantity or 1
 	obj.isNew = (isNew == nil and true or isNew)
 	obj.rolls = {}
+	obj.cacheIsEquippable = false
 	return obj
+end
+
+function Class:GetEligiblePlayers(slotIndex)
+	local result = {}
+
+	if Addon.Settings.Debug.AlwaysMasterLooter then
+		table.insert(result, S:GetPlayerNameWithRealm())
+		return result
+	end
+
+	for i = 1, MAX_RAID_MEMBERS do
+		local name = GetMasterLootCandidate(slotIndex, i)
+		if name then
+			table.insert(result, S:GetPlayerNameWithRealm(name))
+		end
+	end
+
+	return result
 end
 
 function prototype:SetTimeout(timeout)
@@ -76,14 +96,40 @@ function prototype:SetTimeout(timeout)
 	end
 end
 
+function prototype:SetInitialRolls(eligiblePlayers)
+	S:Clear(self.rolls)
+	for _, eligiblePlayer in pairs(eligiblePlayers) do
+		table.insert(self.rolls, Addon.Roll:New(eligiblePlayer, "Pending"))
+	end
+end
+
 function prototype:AddToHistory(lootHistory, timeout)
 	self:SetTimeout(timeout or Addon.DB.Settings.Master.RollTimeout)
 	table.insert(lootHistory.loot, self)
 end
 
+function prototype:GetLocalRoll()
+	local myself = S:GetPlayerNameWithRealm()
+	return S:FilterFirst(self.rolls, function(roll)
+		return roll.player == myself
+	end)
+end
+
+function prototype:IsPendingLocalRoll()
+	local localRoll = self:GetLocalRoll()
+	return localRoll and localRoll.type == "Pending"
+end
+
 function prototype:GetAvailableRollTypes()
 	local ENCHANTING_ID = 333
-	local rollTypes = S:Clone(Addon.DB.Settings.Master.RollTypes.Set)
+	local rollTypes = S:Map(S:Filter(Addon.orderedRollTypes, function(rollType)
+		return rollType.button
+	end), function(rollType)
+		return rollType.type
+	end)
+	S:RemoveValue(rollTypes, "Disenchant")
+	S:RemoveValue(rollTypes, "Pass")
+
 	local itemInfo = { GetItemInfo(self.link) }
 	--itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
 	--itemEquipLoc, iconFileDataID, itemSellPrice, itemClassID, itemSubClassID, bindType, expacID, itemSetID, 
@@ -92,17 +138,17 @@ function prototype:GetAvailableRollTypes()
 	local isUncreatedSetPiece, isWrongClass, isWrongWeaponType = S:ParseTooltip(function(tooltip)
 		tooltip:SetHyperlink(self.link)
 	end, function(left, right)
-		local isUncreatedSetPiece = S:ContainsMatching(left, function(line)
+		local isUncreatedSetPiece = S:FilterContains(left, function(line)
 			return S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
 		end)
-		local isWrongClass = S:ContainsMatching(left, function(line)
+		local isWrongClass = S:FilterContains(left, function(line)
 			if round(line.r * 255) == 255 and round(line.g * 255) == 32 and round(line.b * 255) == 32 then
 				return S:StringStartsWith(line.text, "Class: ") or S:StringStartsWith(line.text, "Classes: ")
 			else
 				return false
 			end
 		end)
-		local isWrongWeaponType = S:ContainsMatching(left, function(line)
+		local isWrongWeaponType = S:FilterContains(left, function(line)
 			if round(line.r * 255) == 255 and round(line.g * 255) == 32 and round(line.b * 255) == 32 then
 				for _, weaponType in pairs(weaponTypes) do
 					if weaponType == line.text then
@@ -127,6 +173,8 @@ function prototype:GetAvailableRollTypes()
 	
 	local isEquippable = isWeapon or isArmor
 	local isWrongArmorType = isArmor and armorType and (not isMiscArmor) and equipLocation ~= "INVTYPE_CLOAK" and armorType ~= classToArmorType[select(2, UnitClass("player"))]
+
+	self.cacheIsEquippable = isEquippable or isUncreatedSetPiece
 
 	if isEquippable or isUncreatedSetPiece then
 		if (not isUncreatedSetPiece) or isWeapon then

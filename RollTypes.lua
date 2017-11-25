@@ -24,14 +24,16 @@ local rollTypes = {
 	},
 	{
 		type = "Major",
-		description = "The item gives you a major boost (either item level or a much better effect) for the current spec.",
+		equippableDescription = "The item gives you a major boost (either item level or a much better effect) for the current spec.",
+		description = "The item is of great use for you.",
 		icon = texturesPath.."\\Roll-Major",
 		shouldRoll = true,
 		button = true,
 	},
 	{
 		type = "Minor",
-		description = "The item is an upgrade for the current spec.",
+		equippableDescription = "The item is an upgrade for the current spec.",
+		description = "The item has some use for you.",
 		icon = texturesPath.."\\Roll-Minor",
 		shouldRoll = true,
 		button = true,
@@ -77,19 +79,44 @@ local rollTypes = {
 	},
 }
 
-function prototype:AddToTooltip(rolls)
-	GameTooltip:AddLine(self.type, 1.0, 1.0, 1.0)
-	if self.description then
-		GameTooltip:AddLine(self.description, 0.8, 0.8, 0.8, true)
-	end
+local function AddLinesToTooltip(self, rolls, onlyLocal)
+	if onlyLocal then
+		local localRoll = S:FilterFirst(rolls, function(roll)
+			return roll.player == S:GetPlayerNameWithRealm()
+		end)
 
-	if not S:IsEmpty(rolls) then
+		if localRoll then
+			localRoll:AddToTooltip()
+		end
+
+		GameTooltip:AddLine("Rolls are hidden until rolling is finished.", 1.0, 0.5, 0.0)
+	else
 		GameTooltip:AddLine("")
-		
 		for _, roll in pairs(rolls) do
 			roll:AddToTooltip()
 		end
 	end
+end
+
+function prototype:AddToTooltip(rolls, equippable)
+	GameTooltip:AddLine(self.type, 1.0, 1.0, 1.0)
+	if self.description then
+		local description = self.description
+		if equippable and self.equippableDescription then
+			description = self.equippableDescription
+		end
+		GameTooltip:AddLine(description, 0.8, 0.8, 0.8, true)
+	end
+
+	local onlyLocal = Addon.DB.Settings.Master.HideRollsUntilFinished and self.type ~= "Pending"
+	if onlyLocal then
+		onlyLocal = not S:FilterContains(rolls, function(roll)
+			return roll.type == "Pending"
+		end)
+	end
+
+	GameTooltip:AddLine("")
+	AddLinesToTooltip(self, rolls, onlyLocal)
 end
 
 for index, rollType in pairs(rollTypes) do

@@ -26,7 +26,7 @@ function prototype:Get(lootID)
 end
 
 function prototype:Contains(lootID)
-	return S:ContainsMatching(self.loot, function (loot)
+	return S:FilterContains(self.loot, function (loot)
 		return loot.lootID == lootID
 	end)
 end

@@ -31,3 +31,12 @@ function prototype:AddToTooltip()
 		1.0, 1.0, 1.0
 	)
 end
+
+function prototype:SetType(type)
+	self.type = type
+	if Addon.rollTypes[self.type].shouldRoll then
+		self.value = random(100)
+	else
+		self.value = nil
+	end
+end

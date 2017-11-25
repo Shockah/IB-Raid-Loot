@@ -35,6 +35,7 @@ function Addon:OnInitialize()
 				Master = {
 					RollTimeout = 120, -- seconds
 					QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
+					HideRollsUntilFinished = true,
 					AutoProceed = { -- automatically distribute loot when all the rolls are done
 						Enabled = false,
 						OnlyIfEveryoneResponded = true,
@@ -111,6 +112,7 @@ function Addon:OnLootReady()
 					local loot = self.lootHistory:Get(lootID)
 					if not loot then
 						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
+						loot:SetInitialRolls(self.Loot:GetEligiblePlayers(i))
 						loot:AddToHistory(self.lootHistory)
 					end
 

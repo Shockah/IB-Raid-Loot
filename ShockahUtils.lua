@@ -108,15 +108,6 @@ function Self:Contains(tbl, value)
 	return self:KeyOf(tbl, value) ~= nil
 end
 
-function Self:ContainsMatching(tbl, filterFunction)
-	for _, v in pairs(tbl) do
-		if filterFunction(v) then
-			return true
-		end
-	end
-	return false
-end
-
 function Self:Slice(tbl, firstIndex, length, preserveIndexes)
 	preserveIndexes = preserveIndexes or false
 	local result = {}
@@ -158,6 +149,27 @@ function Self:Map(tbl, mapFunction)
 	local result = {}
 	for _, v in pairs(tbl) do
 		table.insert(result, mapFunction(v))
+	end
+	return result
+end
+
+function Self:FilterContains(tbl, filterFunction)
+	for _, v in pairs(tbl) do
+		if filterFunction(v) then
+			return true
+		end
+	end
+	return false
+end
+
+function Self:Group(tbl, groupingFunction)
+	local result = {}
+	for _, v in pairs(tbl) do
+		local group = groupingFunction(v)
+		if not result[group] then
+			result[group] = {}
+		end
+		table.insert(result[group], v)
 	end
 	return result
 end
@@ -242,6 +254,8 @@ function Self:ParseTooltip(setupCallback, parseCallback)
 		left = {},
 		right = {},
 	}
+
+	-- TODO: parseableTooltip:NumLines()
 
 	local continue = true
 	local index = 0

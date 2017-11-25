@@ -45,12 +45,14 @@ function Class:New(parentFrame)
 		GameTooltip:Hide()
 	end)
 
-	frame.nameLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	frame.container = CreateFrame("Frame", frame:GetName().."Container", frame)
+
+	frame.nameLabel = frame.container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.nameLabel:SetJustifyH("LEFT")
 
 	frame.rollButtons = {}
 	for _, rollType in pairs(Addon.orderedRollTypes) do
-		local rollButton = CreateFrame("Button", nil, frame)
+		local rollButton = CreateFrame("Button", nil, frame.container)
 		rollButton:SetSize(20, 20)
 		rollButton.rollType = rollType
 
@@ -61,6 +63,21 @@ function Class:New(parentFrame)
 		table.insert(frame.rollButtons, rollButton)
 	end
 
+	local pendingRollType = Addon.rollTypes["Pending"]
+
+	frame.pendingButton = CreateFrame("Button", nil, frame.container)
+	frame.pendingButton:SetSize(20, 20)
+	frame.pendingButton.rollType = pendingRollType
+
+	frame.pendingButton.icon = frame.pendingButton:CreateTexture(nil, "ARTWORK")
+	frame.pendingButton.icon:SetAllPoints(true)
+	frame.pendingButton.icon:SetTexture(pendingRollType.icon.."-Down")
+
+	frame.timerHighlight = frame.container:CreateTexture(nil, "BACKGROUND")
+	frame.timerHighlight:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 0, 0)
+	frame.timerHighlight:SetPoint("BOTTOMLEFT", frame.container, "BOTTOMLEFT", 0, 0)
+	frame.timerHighlight:SetColorTexture(1.0, 1.0, 1.0, 0.15)
+
 	table.insert(instances, frame)
 	return frame
 end
@@ -70,9 +87,12 @@ local function SetupFrame(frame)
 
 	frame:SetHeight(Addon.DB.Settings.Raider.PendingFrame.Cell.Height)
 
+	frame.container:SetPoint("TOPLEFT", frame.icon, "TOPRIGHT", 0, 0)
+	frame.container:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 6)
+
 	frame.nameLabel:ClearAllPoints()
-	frame.nameLabel:SetPoint("LEFT", frame.icon, "RIGHT", 8, frame:GetHeight() / 6)
-	frame.nameLabel:SetPoint("RIGHT", frame, "RIGHT", 0, 0)
+	frame.nameLabel:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 8, -8)
+	frame.nameLabel:SetPoint("RIGHT", frame.container, "RIGHT", 0, 0)
 	
 	frame.icon:SetScript("OnUpdate", function(self)
 		local availableHeight = frame:GetHeight() - 12
@@ -127,22 +147,26 @@ function prototype:SetLoot(loot)
 
 		local availableRollTypes = loot:GetAvailableRollTypes()
 
+		local outerSelf = self
 		local index = 1
 		for _, rollButton in pairs(self.rollButtons) do
-			if S:ContainsMatching(availableRollTypes, function(rollType)
+			if S:FilterContains(availableRollTypes, function(rollType)
 				return rollType == rollButton.rollType.type
 			end) then
-				rollButton.icon:SetTexture(rollButton.rollType.icon)
 				rollButton:SetScript("OnEnter", function(self)
+					self.isMouseOn = true
 					if not self.isMouseDown then
 						self.icon:SetTexture(self.rollType.icon.."-Hover")
 					end
 					GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 					GameTooltip:ClearLines()
-					rollButton.rollType:AddToTooltip({})
+					self.rollType:AddToTooltip(S:Filter(loot.rolls, function(roll)
+						return roll.type == self.rollType.type
+					end), loot.cacheIsEquippable)
 					GameTooltip:Show()
 				end)
 				rollButton:SetScript("OnLeave", function(self)
+					self.isMouseOn = false
 					if not self.isMouseDown then
 						self.icon:SetTexture(self.rollType.icon)
 					end
@@ -159,11 +183,19 @@ function prototype:SetLoot(loot)
 					self.isMouseDown = false
 				end)
 				rollButton:SetScript("OnClick", function(self)
+					if not loot:IsPendingLocalRoll() then
+						return
+					end
+
+					local localRoll = loot:GetLocalRoll()
+					localRoll:SetType(self.rollType.type)
+					outerSelf:UpdateButtonAppearance()
+
 					-- TODO: send roll
 				end)
 
 				rollButton:ClearAllPoints()
-				rollButton:SetPoint("LEFT", self.icon, "RIGHT", 8 + (index - 1) * 24, -self:GetHeight() / 6)
+				rollButton:SetPoint("LEFT", self.container, "LEFT", 6 + (index - 1) * 24, -self:GetHeight() / 6)
 				rollButton:Show()
 
 				index = index + 1
@@ -171,5 +203,59 @@ function prototype:SetLoot(loot)
 				rollButton:Hide()
 			end
 		end
+
+		self.pendingButton:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+			GameTooltip:ClearLines()
+			self.rollType:AddToTooltip(S:Filter(loot.rolls, function(roll)
+				return roll.type == self.rollType.type
+			end), loot.cacheIsEquippable)
+			GameTooltip:Show()
+		end)
+		self.pendingButton:SetScript("OnLeave", function(self)
+			GameTooltip:Hide()
+		end)
+
+		self.pendingButton:ClearAllPoints()
+		self.pendingButton:SetPoint("RIGHT", self.container, "RIGHT", -6, -self:GetHeight() / 6)
+
+		self:UpdateButtonAppearance()
 	end)
+end
+
+function prototype:UpdateButtonAppearance()
+	if not self.loot then
+		return
+	end
+
+	if self.loot:IsPendingLocalRoll() then
+		for _, rollButton in pairs(self.rollButtons) do
+			if rollButton.isMouseDown then
+				rollButton.icon:SetTexture(rollButton.rollType.icon.."-Down")
+			elseif rollButton.isMouseOn then
+				rollButton.icon:SetTexture(rollButton.rollType.icon.."-Hover")
+			else
+				rollButton.icon:SetTexture(rollButton.rollType.icon)
+			end
+			rollButton.icon:SetVertexColor(1.0, 1.0, 1.0)
+		end
+
+		self.pendingButton.icon:SetTexture(self.pendingButton.rollType.icon)
+		self.pendingButton.icon:SetVertexColor(0.4, 0.4, 0.4)
+		self.pendingButton:Show()
+	else
+		local localRoll = self.loot:GetLocalRoll()
+		local localRollType = localRoll and localRoll.type or nil
+
+		for _, rollButton in pairs(self.rollButtons) do
+			rollButton.icon:SetTexture(rollButton.rollType.icon)
+			if rollButton.rollType.type == localRollType then
+				rollButton.icon:SetVertexColor(1.0, 1.0, 0.0)
+			else
+				rollButton.icon:SetVertexColor(0.4, 0.4, 0.4)
+			end
+		end
+
+		self.pendingButton:Hide()
+	end
 end
