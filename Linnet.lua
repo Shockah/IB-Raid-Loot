@@ -19,7 +19,8 @@ Addon.Settings = {
 
 local isLootWindowOpen = false
 local lootCache = nil
-local dropdown = nil
+
+Addon.dropdown = nil
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 	type = "launcher",
@@ -31,7 +32,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 			pendingFrame:SetLoot(Addon.lootHistory.loot)
 			pendingFrame:Show()
 		elseif button == "RightButton" then
-			Addon:ShowDropdown(self)
+			Addon:ShowMinimapDropdown(self)
 		end
 	end,
 	OnTooltipShow = function(tt)
@@ -59,7 +60,7 @@ function Addon:OnInitialize()
 					RollTimeout = 120, -- seconds
 					HideRollsUntilFinished = true, -- hide rollers until rolling is finished
 					AutoProceed = { -- automatically distribute loot when all the rolls are done
-						Enabled = true,
+						Enabled = false,
 						OnlyIfEveryoneResponded = true,
 					},
 					AnnounceWinners = {
@@ -93,11 +94,7 @@ function Addon:OnInitialize()
 	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
 end
 
-function Addon:ShowDropdown(frame)
-	if not dropdown then
-		dropdown = CreateFrame("Frame", selfAddonName.."Dropdown", UIParent, "UIDropDownMenuTemplate")
-	end
-
+function Addon:ShowMinimapDropdown(frame)
 	local timeoutValues = {30, 60, 90, 120, 180, 300}
 	local timeoutValueToText = function(value)
 		if value >= 120 then
@@ -107,7 +104,7 @@ function Addon:ShowDropdown(frame)
 		end
 	end
 
-	EasyMenu({
+	self:ShowDropdown({
 		{
 			text = "Master Looter",
 			isTitle = true,
@@ -139,6 +136,7 @@ function Addon:ShowDropdown(frame)
 			text = "Hide rolls until finished",
 			tooltipText = "Rolls (other than pending) are hidden until everyone rolls or until the timeout.",
 			checked = self.DB.Settings.Master.HideRollsUntilFinished,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.HideRollsUntilFinished = not self.DB.Settings.Master.HideRollsUntilFinished
 			end,
@@ -147,6 +145,7 @@ function Addon:ShowDropdown(frame)
 			text = "Auto-proceed",
 			tooltipText = "Automatically assign loot after rolling is finished.",
 			checked = self.DB.Settings.Master.AutoProceed.Enabled,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.Enabled = not self.DB.Settings.Master.AutoProceed.Enabled
 			end,
@@ -155,6 +154,7 @@ function Addon:ShowDropdown(frame)
 			text = "   Only if everyone responded",
 			tooltipText = "Only automatically assign loot if actually everyone rolled.",
 			checked = self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded = not self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded
 			end,
@@ -163,6 +163,7 @@ function Addon:ShowDropdown(frame)
 			text = "Announce assignees",
 			tooltipText = "Announce assignees in Raid or Raid Warning chat.",
 			checked = self.DB.Settings.Master.AnnounceWinners.Enabled,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.Enabled = not self.DB.Settings.Master.AnnounceWinners.Enabled
 			end,
@@ -171,6 +172,7 @@ function Addon:ShowDropdown(frame)
 			text = "   In Raid Warning",
 			tooltipText = "Use the Raid Warning for announcements.",
 			checked = self.DB.Settings.Master.AnnounceWinners.AsRaidWarning,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.AsRaidWarning = not self.DB.Settings.Master.AnnounceWinners.AsRaidWarning
 			end,
@@ -184,11 +186,20 @@ function Addon:ShowDropdown(frame)
 			text = "Auto-pass unusable",
 			tooltipText = "Automatically pass equippable loot you can't use.",
 			checked = self.DB.Settings.Raider.AutoPassUnusable,
+			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Raider.AutoPassUnusable = not self.DB.Settings.Raider.AutoPassUnusable
 			end,
 		},
-	}, dropdown, frame, 0, 0, "MENU", 2)
+	}, frame)
+end
+
+function Addon:ShowDropdown(menus, frame, seconds)
+	if not self.dropdown then
+		self.dropdown = CreateFrame("Frame", selfAddonName.."Dropdown", UIParent, "UIDropDownMenuTemplate")
+	end
+
+	EasyMenu(menus, self.dropdown, frame, 0, 0, "MENU", seconds or 2)
 end
 
 function Addon:OnDisable()
@@ -297,7 +308,7 @@ function Addon:OnLootReady()
 		end
 
 		local pendingFrame = self.PendingFrame:Get()
-		pendingFrame:SetLoot(self.lootHistory:GetNonAssignedLoot())
+		pendingFrame:SetLoot(newLoot)
 		pendingFrame:Show()
 	end
 end

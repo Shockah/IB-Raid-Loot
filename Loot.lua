@@ -313,14 +313,25 @@ function prototype:HandleDoneRollingActions()
 				local sortedRolls = S:Clone(self.rolls)
 				Addon.Roll:Sort(sortedRolls)
 
-				if #sortedRolls > 1 and sortedRolls[1].type == sortedRolls[2].type and sortedRolls[1].values[#sortedRolls[1].values] == sortedRolls[2].values[#sortedRolls[2].values] then
-					sortedRolls[1].values:RollAgain()
-					sortedRolls[2].values:RollAgain()
-					sortedRolls[1]:SendRoll(self)
-					sortedRolls[2]:SendRoll(self)
-					self:HandleDoneRollingActions()
+				if #sortedRolls > self.quantity then
+					local lastRoll = sortedRolls[self.quantity]
+					local nextRoll = sortedRolls[self.quantity]
+
+					if #sortedRolls > self.quantity and lastRoll.type == nextRoll.type and lastRoll.values[#lastRoll.values] == nextRoll.values[#nextRoll.values] then
+						for i = 1, self.quantity do
+							sortedRolls[i].values:RollAgain()
+							sortedRolls[i]:SendRoll(self)
+						end
+						self:HandleDoneRollingActions()
+					else
+						for i = 1, self.quantity do
+							self:AssignLoot(sortedRolls[i])
+						end
+					end
 				else
-					self:AssignLoot(sortedRolls[1])
+					for i = 1, self.quantity do
+						self:AssignLoot(sortedRolls[i])
+					end
 				end
 			end
 		end
@@ -353,8 +364,12 @@ function prototype:GetCurrentLootIndex()
 	return nil
 end
 
+function prototype:IsFullyAssignedOrPending()
+	return #self.assigning + self.assigned >= self.quantity
+end
+
 function prototype:IsFullyAssigned()
-	return #self.assigning - self.assigned <= 0
+	return self.assigned >= self.quantity
 end
 
 function prototype:CancelLootAssigning(all)
@@ -365,9 +380,10 @@ function prototype:CancelLootAssigning(all)
 			Addon:CancelTimer(assignment.timer)
 		end
 		S:Clear(self.assigning)
+		return nil
 	else
 		if S:IsEmpty(self.assigning) then
-			return
+			return nil
 		end
 
 		local finishedAssignment = S:FilterFirst(self.assigning, function(assignment)
@@ -376,29 +392,38 @@ function prototype:CancelLootAssigning(all)
 
 		if finishedAssignment then
 			S:RemoveValue(self.assigning, finishedAssignment)
+			return finishedAssignment
 		else
+			local assignment = self.assigning[1]
 			Addon:CancelTimer(self.assigning[1])
 			table.remove(self.assigning, 1)
+			return assignment
 		end
 	end
 end
 
 function prototype:LootAssigned(cancelAll)
-	if self.assigned then
+	if self:IsFullyAssigned() then
 		return
 	end
 
-	self:CancelLootAssigning(cancelAll)
-	self:AnnounceWinner(self.assigningTo)
+	local assignment = self:CancelLootAssigning(cancelAll)
+	if assignment then
+		self:AnnounceWinner(assignment.roll)
+	end
 	self.assigned = self.assigned + 1
 end
 
 function prototype:AssignLoot(roll)
-	if self.assigned >= self.quantity or self:IsFullyAssigned() then
+	if self:IsFullyAssignedOrPending() then
 		return
 	end
 
 	if Addon.Settings.Debug.DebugMode then
+		table.insert(self.assigning, {
+			timer = nil,
+			roll = roll,
+		})
 		self:LootAssigned()
 	else
 		local lootIndex = self:GetCurrentLootIndex()

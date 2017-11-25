@@ -88,6 +88,59 @@ function Class:New(parentFrame)
 	frame.timerHighlight:SetPoint("BOTTOMLEFT", frame.container, "BOTTOMLEFT", 0, 0)
 	frame.timerHighlight:SetColorTexture(0.5, 0.5, 0.5, 0.3)
 
+	frame.assignButton = CreateFrame("Button", nil, frame.container, "UIPanelButtonTemplate")
+	frame.assignButton:SetText(">")
+	frame.assignButton:SetSize(32, 24)
+	frame.assignButton:SetPoint("TOPRIGHT", frame.container, "TOPRIGHT", 0, 0)
+	frame.assignButton:SetScript("OnClick", function(self)
+		local sortedRolls = S:Clone(frame.loot.rolls)
+		if S:IsEmpty(sortedRolls) then
+			return
+		end
+		Addon.Roll:Sort(sortedRolls)
+
+		if IsShiftKeyDown() then
+			sortedRolls[1]:SendRoll(frame.loot)
+		else
+			local groupedRolls = S:Group(sortedRolls, function(roll)
+				return roll.type
+			end)
+
+			local menus = {}
+			local submenus = {}
+			for rollType, groupedRollObjs in pairs(groupedRolls) do
+				local menusToUse = S:IsEmpty(menus) and menus or submenus
+				table.insert(menus, {
+					text = rollType,
+					isTitle = true,
+				})
+				for _, rollObj in pairs(groupedRollObjs) do
+					local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
+					local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
+					local valuesStr = S:Join(", ", rollObj.values)
+					valuesStr = S:IsBlankString(valuesStr) and "" or ": "..valuesStr
+
+					table.insert(menus, {
+						text = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r"..valuesStr,
+						func = function()
+							rollObj:SendRoll(frame.loot)
+						end,
+					})
+				end
+			end
+
+			if not S:IsEmpty(submenus) then
+				table.insert(menus, {
+					text = "Other",
+					hasArrow = true,
+					menuList = submenus,
+				})
+			end
+			Addon:ShowDropdown(menus, self)
+		end
+	end)
+	frame.assignButton:Hide()
+
 	table.insert(instances, frame)
 	return frame
 end
@@ -102,7 +155,7 @@ local function SetupFrame(frame)
 
 	frame.nameLabel:ClearAllPoints()
 	frame.nameLabel:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 8, -8)
-	frame.nameLabel:SetPoint("RIGHT", frame.container, "RIGHT", 0, 0)
+	frame.nameLabel:SetPoint("RIGHT", frame.container, "RIGHT", -32, 0)
 
 	frame.timerHighlight:SetWidth(frame.container:GetWidth())
 	frame.container:SetScript("OnUpdate", function(self)
@@ -316,5 +369,11 @@ function prototype:UpdateButtonAppearance()
 		self.noResponseButton:Show()
 
 		self.pendingButton:Hide()
+	end
+
+	if (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) and (not self.loot:HasPendingRolls()) then
+		self.assignButton:Show()
+	else
+		self.assignButton:Hide()
 	end
 end

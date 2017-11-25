@@ -64,10 +64,18 @@ function Class:Sort(rolls)
 end
 
 function prototype:AddToTooltip()
+	local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(self.player)))
+	local r, g, b = 1.0, 1.0, 1.0
+	if class then
+		r = RAID_CLASS_COLORS[class].r
+		g = RAID_CLASS_COLORS[class].g
+		b = RAID_CLASS_COLORS[class].b
+	end
+
 	GameTooltip:AddDoubleLine(
 		S:GetPlayerNameWithOptionalRealm(self.player),
 		S:Join(", ", self.values),
-		1.0, 1.0, 1.0,
+		r, g, b,
 		1.0, 1.0, 1.0
 	)
 end
