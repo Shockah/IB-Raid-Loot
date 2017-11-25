@@ -24,7 +24,7 @@ local rollTypes = {
 	},
 	{
 		type = "Major",
-		equippableDescription = "The item gives you a major boost (either item level or a much better effect) for the current spec.",
+		equippableDescription = "The item gives you a major boost (either +10 item level or a much better effect) for the current spec.",
 		description = "The item is of great use for you.",
 		icon = texturesPath.."\\Roll-Major",
 		shouldRoll = true,
@@ -98,7 +98,7 @@ local function AddLinesToTooltip(self, rolls, onlyLocal)
 	end
 end
 
-function prototype:AddToTooltip(rolls, equippable)
+function prototype:AddToTooltip(allRolls, rolls, equippable)
 	GameTooltip:AddLine(self.type, 1.0, 1.0, 1.0)
 	if self.description then
 		local description = self.description
@@ -110,7 +110,7 @@ function prototype:AddToTooltip(rolls, equippable)
 
 	local onlyLocal = Addon.DB.Settings.Master.HideRollsUntilFinished and self.type ~= "Pending"
 	if onlyLocal then
-		onlyLocal = not S:FilterContains(rolls, function(roll)
+		onlyLocal = S:FilterContains(allRolls, function(roll)
 			return roll.type == "Pending"
 		end)
 	end

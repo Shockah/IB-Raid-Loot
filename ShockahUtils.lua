@@ -174,6 +174,17 @@ function Self:Group(tbl, groupingFunction)
 	return result
 end
 
+function Self:Join(delimiter, tbl)
+	local result = ""
+	for i, v in ipairs(tbl) do
+		if i ~= 1 then
+			result = result..delimiter
+		end
+		result = result..v
+	end
+	return result
+end
+
 ------------------------------
 -- items
 ------------------------------

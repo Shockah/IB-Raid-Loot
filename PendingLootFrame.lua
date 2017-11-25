@@ -160,7 +160,7 @@ function prototype:SetLoot(loot)
 					end
 					GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 					GameTooltip:ClearLines()
-					self.rollType:AddToTooltip(S:Filter(loot.rolls, function(roll)
+					self.rollType:AddToTooltip(loot.rolls, S:Filter(loot.rolls, function(roll)
 						return roll.type == self.rollType.type
 					end), loot.cacheIsEquippable)
 					GameTooltip:Show()
@@ -207,7 +207,7 @@ function prototype:SetLoot(loot)
 		self.pendingButton:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:ClearLines()
-			self.rollType:AddToTooltip(S:Filter(loot.rolls, function(roll)
+			self.rollType:AddToTooltip(loot.rolls, S:Filter(loot.rolls, function(roll)
 				return roll.type == self.rollType.type
 			end), loot.cacheIsEquippable)
 			GameTooltip:Show()
