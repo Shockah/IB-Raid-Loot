@@ -21,6 +21,27 @@ Addon.Settings = {
 local isLootWindowOpen = false
 local lootCache = nil
 
+local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
+	type = "launcher",
+	text = selfAddonName,
+	icon = "Interface\\AddOns\\"..selfAddonName.."\\Textures\\Roll-Transmog",
+	OnClick = function(self, button)
+		if button == "LeftButton" then
+			local pendingFrame = Addon.PendingFrame:Get()
+			pendingFrame:SetLoot(Addon.lootHistory.loot)
+			pendingFrame:Show()
+		elseif button == "RightButton" then
+			
+		end
+	end,
+	OnTooltipShow = function(tt)
+		tt:AddLine(selfAddonName)
+		tt:AddLine(" ")
+		tt:AddLine("LMB: Pending Rolls window")
+		tt:AddLine("RMB: Options")
+	end
+})
+
 function Addon:OnInitialize()
 	self.lootHistory = self.LootHistory:New()
 
@@ -72,6 +93,8 @@ function Addon:OnInitialize()
 	if self.Settings.Debug.Settings then
 		self.DB.Settings.Master.RollTimeout = 30
 	end
+
+	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
 end
 
 function Addon:OnDisable()
