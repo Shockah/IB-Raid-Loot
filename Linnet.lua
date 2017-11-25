@@ -341,7 +341,7 @@ function Addon:OnLootSlotCleared(event, slotIndex)
 		end)
 
 		if loot then
-			loot.assigned = loot.assigned + 1
+			table.insert(loot.assigned, {})
 		end
 	end
 end

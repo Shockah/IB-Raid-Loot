@@ -16,8 +16,10 @@
 	* timeoutTimer: AceTimer ID -- timeout timer
 	* assigning: table -- list of structs:
 		* timer: AceTimer ID -- loot assigning timeout timer
+		* roll: table -- already assigned Roll object
+	* assigned: table -- the already assigned/gone amount of loot
+		* timer: AceTimer ID -- loot assigning timeout timer
 		* roll: table -- Roll object the loot is currently being assigned to
-	* assigned: int -- the already assigned/gone amount of loot
 ]]
 
 local selfAddonName = "Linnet"
@@ -77,7 +79,7 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.cacheIsUnusable = false
 	obj.hideRollsUntilFinished = Addon.DB.Settings.Master.HideRollsUntilFinished
 	obj.assigning = {}
-	obj.assigned = 0
+	obj.assigned = {}
 	return obj
 end
 
@@ -365,11 +367,11 @@ function prototype:GetCurrentLootIndex()
 end
 
 function prototype:IsFullyAssignedOrPending()
-	return #self.assigning + self.assigned >= self.quantity
+	return #self.assigning + #self.assigned >= self.quantity
 end
 
 function prototype:IsFullyAssigned()
-	return self.assigned >= self.quantity
+	return #self.assigned >= self.quantity
 end
 
 function prototype:CancelLootAssigning(all)
@@ -409,9 +411,16 @@ function prototype:LootAssigned(cancelAll)
 
 	local assignment = self:CancelLootAssigning(cancelAll)
 	if assignment then
+		assignment.roll.assigned = true
 		self:AnnounceWinner(assignment.roll)
+		table.insert(self.assigned, assignment)
+	else
+		table.insert(self.assigned, {})
 	end
-	self.assigned = self.assigned + 1
+
+	if Addon.PendingFrame.frame then
+		Addon.PendingFrame.frame:Update()
+	end
 end
 
 function prototype:AssignLoot(roll)

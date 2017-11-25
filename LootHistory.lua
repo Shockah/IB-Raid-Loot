@@ -39,7 +39,7 @@ end
 
 function prototype:GetNonAssignedLoot()
 	return S:Filter(self.loot, function(loot)
-		return not loot.assigned
+		return not loot:IsFullyAssigned()
 	end)
 end
 

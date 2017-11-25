@@ -90,10 +90,23 @@ function Class:New(parentFrame)
 
 	frame.assignButton = CreateFrame("Button", nil, frame.container, "UIPanelButtonTemplate")
 	frame.assignButton:SetText(">")
-	frame.assignButton:SetSize(32, 24)
+	frame.assignButton:SetSize(32, 20)
 	frame.assignButton:SetPoint("TOPRIGHT", frame.container, "TOPRIGHT", 0, 0)
 	frame.assignButton:SetScript("OnClick", function(self)
-		local sortedRolls = S:Clone(frame.loot.rolls)
+		local sortedRolls = S:Filter(frame.loot.rolls, function(roll)
+			return (not S:FilterContains(frame.loot.assigning, function(assignment)
+				return assignment.roll == roll
+			end)) and (not S:FilterContains(frame.loot.assigned, function(assignment)
+				return assignment.roll == roll
+			end))
+		end)
+
+		local alreadyAssignedRolls = S:Map(S:Filter(frame.loot.assigned, function(assignment)
+			return assignment.roll
+		end), function(assignment)
+			return assignment.roll
+		end)
+
 		if S:IsEmpty(sortedRolls) then
 			return
 		end
@@ -105,6 +118,9 @@ function Class:New(parentFrame)
 			local groupedRolls = S:Group(sortedRolls, function(roll)
 				return roll.type
 			end)
+			if not S:IsEmpty(alreadyAssignedRolls) then
+				groupedRolls["Already assigned"] = alreadyAssignedRolls
+			end
 
 			local menus = {}
 			local submenus = {}
@@ -124,7 +140,7 @@ function Class:New(parentFrame)
 					table.insert(menus, {
 						text = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r"..valuesStr,
 						func = function()
-							rollObj:SendRoll(frame.loot)
+							frame.loot:AssignLoot(rollObj)
 						end,
 					})
 				end
@@ -182,6 +198,14 @@ local function SetupFrame(frame)
 				end
 			end
 			frame.timerHighlight:SetColorTexture(r, g, b, 0.3)
+			frame.timerHighlight:Show()
+		elseif frame.loot:IsFullyAssigned() then
+			frame.timerHighlight:SetWidth(self:GetWidth())
+			frame.timerHighlight:SetColorTexture(0.5, 0.5, 1.0, 0.3)
+			frame.timerHighlight:Show()
+		elseif (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) then
+			frame.timerHighlight:SetWidth(self:GetWidth())
+			frame.timerHighlight:SetColorTexture(0.0, 1.0, 0.0, 0.3)
 			frame.timerHighlight:Show()
 		else
 			frame.timerHighlight:Hide()
@@ -372,9 +396,9 @@ function prototype:UpdateButtonAppearance()
 		self.pendingButton:Hide()
 	end
 
-	if (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) and (not self.loot:HasPendingRolls()) then
-		self.assignButton:Show()
-	else
+	if self.loot:IsFullyAssigned() then
 		self.assignButton:Hide()
+	else
+		self.assignButton:Show()
 	end
 end

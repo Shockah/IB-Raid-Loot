@@ -5,6 +5,7 @@
 	* player: string -- player name with realm
 	* type: string -- "Major", "Minor", etc.
 	* values: table -- table of int roll values (1-100)
+	* assigned: bool -- was it assigned
 ]]
 
 local selfAddonName = "Linnet"
@@ -20,6 +21,7 @@ function Class:New(player, type, values)
 	obj.player = player or S:GetPlayerNameWithRealm(UnitName("player"))
 	obj.type = type
 	obj.values = values == nil and {} or (type(values) == "number" and {values} or values)
+	obj.assigned = false
 	return obj
 end
 
@@ -72,8 +74,10 @@ function prototype:AddToTooltip()
 		b = RAID_CLASS_COLORS[class].b
 	end
 
+	local prefix = self.assigned and "> " or ""
+
 	GameTooltip:AddDoubleLine(
-		S:GetPlayerNameWithOptionalRealm(self.player),
+		prefix..S:GetPlayerNameWithOptionalRealm(self.player),
 		S:Join(", ", self.values),
 		r, g, b,
 		1.0, 1.0, 1.0
