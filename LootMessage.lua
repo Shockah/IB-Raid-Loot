@@ -53,6 +53,6 @@ function Class:Handle(message, distribution, sender)
 	end
 
 	local pendingFrame = Addon.PendingFrame:Get()
-	pendingFrame:SetLoot(Addon.lootHistory.loot)
+	pendingFrame:SetLoot(Addon.lootHistory:GetNonAssignedLoot())
 	pendingFrame:Show()
 end

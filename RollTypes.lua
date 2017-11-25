@@ -11,6 +11,7 @@ local rollTypes = {
 	{
 		type = "2-set",
 		description = "The item either gives you a 2-set or it's your 1st set piece.",
+		announceName = "a 2-set",
 		icon = texturesPath.."\\Roll-2set",
 		shouldRoll = true,
 		button = true,
@@ -18,6 +19,7 @@ local rollTypes = {
 	{
 		type = "4-set",
 		description = "The item either gives you a 4-set or it's your 3rd set piece.",
+		announceName = "a 4-set",
 		icon = texturesPath.."\\Roll-4set",
 		shouldRoll = true,
 		button = true,
@@ -26,6 +28,7 @@ local rollTypes = {
 		type = "Major",
 		equippableDescription = "The item gives you a major boost (either +10 item level or a much better effect) for the current spec.",
 		description = "The item is of great use for you.",
+		announceName = "a Major",
 		icon = texturesPath.."\\Roll-Major",
 		shouldRoll = true,
 		button = true,
@@ -34,6 +37,7 @@ local rollTypes = {
 		type = "Minor",
 		equippableDescription = "The item is an upgrade for the current spec.",
 		description = "The item has some use for you.",
+		announceName = "a Minor",
 		icon = texturesPath.."\\Roll-Minor",
 		shouldRoll = true,
 		button = true,
@@ -41,6 +45,7 @@ local rollTypes = {
 	{
 		type = "Off-spec",
 		description = "The item is an upgrade for another spec.",
+		announceName = "an Off-spec",
 		icon = texturesPath.."\\Roll-Offspec",
 		shouldRoll = true,
 		button = true,
@@ -48,6 +53,7 @@ local rollTypes = {
 	{
 		type = "Transmog",
 		description = "The item has an appearance you didn't unlock yet.",
+		announceName = "a Transmog",
 		icon = texturesPath.."\\Roll-Transmog",
 		shouldRoll = true,
 		button = true,
@@ -55,30 +61,35 @@ local rollTypes = {
 	{
 		type = "Warforged",
 		description = "The base item isn't an upgrade, but you want to try your luck at getting a better warforged/titanforged bonus.",
+		announceName = "a Warforged",
 		icon = texturesPath.."\\Roll-Warforged",
 		shouldRoll = true,
 		button = true,
 	},
 	{
 		type = "Disenchant",
+		announceName = "a Disenchant",
 		icon = texturesPath.."\\Roll-Disenchant",
 		shouldRoll = false,
 		button = true,
 	},
 	{
 		type = "Pass",
+		announceName = "a Pass",
 		icon = texturesPath.."\\Roll-Pass",
 		shouldRoll = false,
 		button = true,
 	},
 	{
 		type = "No Response",
+		announceName = "a No Response",
 		icon = texturesPath.."\\Roll-NoResponse",
 		shouldRoll = false,
 		button = false,
 	},
 	{
 		type = "Pending",
+		announceName = "a No Response",
 		icon = texturesPath.."\\Roll-Pending",
 		shouldRoll = false,
 		button = false,

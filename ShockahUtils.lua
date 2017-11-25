@@ -171,6 +171,14 @@ function Self:FilterContains(tbl, filterFunction)
 	return false
 end
 
+function Self:FilterRemove(tbl, filterFunction)
+	for k, v in pairs(tbl) do
+		if filterFunction(v) then
+			tbl[k] = nil
+		end
+	end
+end
+
 function Self:Group(tbl, groupingFunction)
 	local result = {}
 	for _, v in pairs(tbl) do

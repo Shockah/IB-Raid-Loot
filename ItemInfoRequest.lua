@@ -23,17 +23,6 @@ function Class:New(items, callback)
 	return obj
 end
 
-local function GetActiveRequestForItem(item)
-	for _, activeRequest in pairs(activeRequests) do
-		for _, activeRequestItem in pairs(activeRequest.items) do
-			if activeRequestItem == item then
-				return activeRequest
-			end
-		end
-	end
-	return nil
-end
-
 function Class:Get(items, callback)
 	local infos = {}
 	local hasAllInfos = true
@@ -43,9 +32,7 @@ function Class:Get(items, callback)
 		local itemInfo = { GetItemInfo(item) }
 		if itemInfo[1] == nil then
 			hasAllInfos = false
-			if not GetActiveRequestForItem(item) then
-				needsRequest = true
-			end
+			needsRequest = true
 		else
 			infos[item] = itemInfo
 		end

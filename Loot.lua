@@ -12,6 +12,10 @@
 	* hideRollsUntilFinished: bool -- initially coming from DB.Settings; hide rollers until rolling is finished
 	* cacheIsEquippable: bool -- cached: is item equippable
 	* timeoutTimer: AceTimer ID -- timeout timer
+	* assigning: table -- list of structs:
+		* timer: AceTimer ID -- loot assigning timeout timer
+		* roll: table -- Roll object the loot is currently being assigned to
+	* assigned: int -- the already assigned/gone amount of loot
 ]]
 
 local selfAddonName = "Linnet"
@@ -68,6 +72,8 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.rolls = {}
 	obj.cacheIsEquippable = false
 	obj.hideRollsUntilFinished = Addon.DB.Settings.Master.HideRollsUntilFinished
+	obj.assigning = {}
+	obj.assigned = 0
 	return obj
 end
 
@@ -147,6 +153,9 @@ end
 
 function prototype:AddToHistory(lootHistory, timeout)
 	self:SetTimeout(timeout or Addon.DB.Settings.Master.RollTimeout)
+	S:FilterRemove(lootHistory.loot, function(loot)
+		return loot.lootID == self
+	end)
 	table.insert(lootHistory.loot, self)
 end
 
@@ -286,5 +295,120 @@ function prototype:HandleDoneRollingActions()
 		Addon.PendingFrame.frame:Update()
 	end
 
+	if (not S:IsEmpty(self.rolls)) and (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) then
+		if Addon.DB.Settings.Master.AutoProceed.Enabled then
+			local everyonePassed = not S:FilterContains(self.rolls, function(roll)
+				return roll.type ~= "Pass"
+			end)
+			local everyoneResponded = not S:FilterContains(self.rolls, function(roll)
+				return roll.type == "No Response"
+			end)
+
+			if (not everyonePassed) and everyoneResponded or (not Addon.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded) then
+				local sortedRolls = S:Clone(self.rolls)
+				Addon.Roll:Sort(sortedRolls)
+
+				if #sortedRolls > 1 and sortedRolls[1].type == sortedRolls[2].type and sortedRolls[1].values[#sortedRolls[1].values] == sortedRolls[2].values[#sortedRolls[2].values] then
+					sortedRolls[1].values:RollAgain()
+					sortedRolls[2].values:RollAgain()
+					sortedRolls[1]:SendRoll(self)
+					sortedRolls[2]:SendRoll(self)
+					self:HandleDoneRollingActions()
+				else
+					self:AssignLoot(sortedRolls[1])
+				end
+			end
+		end
+	end
+
 	return true
+end
+
+function prototype:AnnounceWinner(roll)
+	local rollType = Addon.rollTypes[roll.type]
+	local rollValues = S:Join(", ", roll.values)
+
+	local message
+	if rollType.shouldRoll then
+		message = roll.player.." wins "..self.link.." with "..rollType.announceName.." roll of "..rollValues.."."
+	else
+		message = roll.player.." wins "..self.link.." with "..rollType.announceName.." roll."
+	end
+	Addon:AnnounceWinner(message)
+end
+
+function prototype:GetCurrentLootIndex()
+	local numLootItems = GetNumLootItems()
+	for i = 1, numLootItems do
+		local lootID = Addon:LootIDForLootFrameSlot(i)
+		if lootID == self.lootID then
+			return i
+		end
+	end
+	return nil
+end
+
+function prototype:IsFullyAssigned()
+	return #self.assigning - self.assigned <= 0
+end
+
+function prototype:CancelLootAssigning(all)
+	all = all or false
+
+	if all then
+		for _, assignment in pairs(self.assigning) do
+			Addon:CancelTimer(assignment.timer)
+		end
+		S:Clear(self.assigning)
+	else
+		if S:IsEmpty(self.assigning) then
+			return
+		end
+
+		local finishedAssignment = S:FilterFirst(self.assigning, function(assignment)
+			return Addon:TimeLeft(assignment.timer) == 0
+		end)
+
+		if finishedAssignment then
+			S:RemoveValue(self.assigning, finishedAssignment)
+		else
+			Addon:CancelTimer(self.assigning[1])
+			table.remove(self.assigning, 1)
+		end
+	end
+end
+
+function prototype:LootAssigned(all)
+	if self.assigned then
+		return
+	end
+
+	self:CancelLootAssigning(all)
+	self:AnnounceWinner(self.assigningTo)
+	self.assigned = self.assigned + 1
+end
+
+function prototype:AssignLoot(roll)
+	if self.assigned >= self.quantity or self:IsFullyAssigned() then
+		return
+	end
+
+	local lootIndex = self:GetCurrentLootIndex()
+	if not lootIndex then
+		UIErrorsFrame:AddMessage("The item is not available. Is the loot window open?", 1.0, 0.0, 0.0)
+	end
+
+	local candidateIndex = roll:GetCurrentCandidateIndex()
+	if not candidateIndex then
+		UIErrorsFrame:AddMessage("Chosen player is not eligible for loot.", 1.0, 0.0, 0.0)
+	end
+
+	table.insert(self.assigning, {
+		timer = Addon:ScheduleTimer(function()
+			self:CancelLootAssigning()
+			UIErrorsFrame:AddMessage("Unknown error while giving out loot.", 1.0, 0.0, 0.0)
+		end, Addon.Settings.LootAssignTimeout),
+		roll = roll,
+	})
+	GiveMasterLoot(lootIndex, candidateIndex)
 end

@@ -20,20 +20,26 @@ function Class:New()
 end
 
 function prototype:Get(lootID)
-	return S:FilterFirst(self.loot, function (loot)
+	return S:FilterFirst(self.loot, function(loot)
 		return loot.lootID == lootID
 	end)
 end
 
 function prototype:Contains(lootID)
-	return S:FilterContains(self.loot, function (loot)
+	return S:FilterContains(self.loot, function(loot)
 		return loot.lootID == lootID
 	end)
 end
 
 function prototype:GetAllNew()
-	return S:Filter(self.loot, function (loot)
+	return S:Filter(self.loot, function(loot)
 		return loot.isNew
+	end)
+end
+
+function prototype:GetNonAssignedLoot()
+	return S:Filter(self.loot, function(loot)
+		return not loot.assigned
 	end)
 end
 

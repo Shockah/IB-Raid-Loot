@@ -75,7 +75,7 @@ end
 function prototype:SetType(type)
 	self.type = type
 	S:Clear(self.values)
-	if Addon:IsMasterLooter() then
+	if Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode then
 		self:RollAgain()
 	end
 end
@@ -87,9 +87,23 @@ function prototype:RollAgain()
 end
 
 function prototype:SendRoll(loot)
-	if Addon:IsMasterLooter() then
-		Addon.RollValuesMessage:New(loot, self):Send()
+	if Addon.Settings.Debug.DebugMode then
+		loot:HandleDoneRollingActions()
 	else
-		Addon.RollMessage:New(loot, self.type):Send()
+		if Addon:IsMasterLooter() then
+			Addon.RollValuesMessage:New(loot, self):Send()
+		else
+			Addon.RollMessage:New(loot, self.type):Send()
+		end
 	end
+end
+
+function prototype:GetCurrentCandidateIndex()
+	for i = 1, MAX_RAID_MEMBERS do
+		local candidate = GetMasterLootCandidate(i)
+		if S:GetPlayerNameWithRealm(candidate) == self.player then
+			return i
+		end
+	end
+	return nil
 end
