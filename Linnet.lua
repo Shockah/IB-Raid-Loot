@@ -10,7 +10,7 @@ Addon.Settings = {
 	Debug = {
 		Settings = true,
 		Messages = true,
-		AlwaysMasterLooter = false,
+		DebugMode = true,
 	},
 	AceCommPrefix = "Linnet",
 	LootAssignTimeout = 2, -- seconds
@@ -79,10 +79,6 @@ function Addon:OnItemInfoReceived(event, itemID)
 end
 
 function Addon:IsMasterLooter()
-	if self.Settings.Debug.AlwaysMasterLooter then
-		return true
-	end
-
 	if not IsInRaid() then
 		return false
 	end
@@ -93,7 +89,7 @@ end
 
 function Addon:OnLootReady()
 	isLootWindowOpen = true
-	if not self:IsMasterLooter() then
+	if not self:IsMasterLooter() and not self.Settings.Debug.DebugMode then
 		return
 	end
 

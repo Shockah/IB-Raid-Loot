@@ -11,6 +11,7 @@
 	* timeout: int -- startTime + timeout to end at
 	* hideRollsUntilFinished: bool -- initially coming from DB.Settings; hide rollers until rolling is finished
 	* cacheIsEquippable: bool -- cached: is item equippable
+	* timeoutTimer: AceTimer ID -- timeout timer
 ]]
 
 local selfAddonName = "Linnet"
@@ -73,8 +74,27 @@ end
 function Class:GetEligiblePlayers(slotIndex)
 	local result = {}
 
-	if Addon.Settings.Debug.AlwaysMasterLooter then
-		table.insert(result, S:GetPlayerNameWithRealm())
+	if Addon.Settings.Debug.DebugMode then
+		if IsInRaid() then
+			local num = GetNumGroupMembers()
+			for i = 1, num do
+				local name = GetRaidRosterInfo(i)
+				if name then
+					table.insert(result, S:GetPlayerNameWithRealm(name))
+				end
+			end
+		elseif IsInGroup() then
+			table.insert(result, S:GetPlayerNameWithRealm())
+			local num = GetNumGroupMembers()
+			for i = 1, num do
+				local name = UnitName("party"..i)
+				if name then
+					table.insert(result, S:GetPlayerNameWithRealm(name))
+				end
+			end
+		else
+			table.insert(result, S:GetPlayerNameWithRealm())
+		end
 		return result
 	end
 
@@ -92,9 +112,29 @@ function prototype:SetTimeout(timeout)
 	if timeout then
 		self.startTime = GetTime()
 		self.timeout = timeout
+		if self.timeoutTimer then
+			Addon:CancelTimer(self.timeoutTimer)
+		end
+		self.timeoutTimer = Addon:ScheduleTimer(function()
+			local pendingRolls = S:Filter(self.rolls, function(roll)
+				return roll.type == "Pending"
+			end)
+			for _, pendingRoll in pairs(pendingRolls) do
+				self.timeoutTimer = nil
+				pendingRoll.type = "No Response"
+				if Addon:IsMasterLooter() then
+					pendingRoll:SendRoll(self)
+				end
+			end
+			self:HandleDoneRollingActions()
+		end, timeout)
 	else
 		self.startTime = nil
 		self.timeout = nil
+		if self.timeoutTimer then
+			Addon:CancelTimer(self.timeoutTimer)
+			self.timeoutTimer = nil
+		end
 	end
 end
 
@@ -231,4 +271,20 @@ function prototype:GetAvailableRollTypes()
 	end
 	
 	return rollTypes
+end
+
+function prototype:HandleDoneRollingActions()
+	if self:HasPendingRolls() then
+		return false
+	end
+
+	if self.timeoutTimer then
+		Addon:CancelTimer(self.timeoutTimer)
+	end
+
+	if Addon.PendingFrame.frame then
+		Addon.PendingFrame.frame:Update()
+	end
+
+	return true
 end

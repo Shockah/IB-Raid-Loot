@@ -48,11 +48,9 @@ function Class:Handle(message, distribution, sender)
 	roll:SetType(message.type)
 	roll:SendRoll(loot)
 
-	if Addon.PendingFrame.frame:IsVisible() then
-		for _, lootFrame in pairs(Addon.PendingFrame.frame.itemFrames) do
-			if lootFrame:IsVisible() then
-				lootFrame:UpdateButtonAppearance()
-			end
+	if not loot:HandleDoneRollingActions() then
+		if Addon.PendingFrame.frame then
+			Addon.PendingFrame.frame:Update()
 		end
 	end
 end

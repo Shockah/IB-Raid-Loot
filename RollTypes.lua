@@ -71,12 +71,12 @@ local rollTypes = {
 		shouldRoll = false,
 		button = true,
 	},
-	--[[{
+	{
 		type = "No Response",
 		icon = texturesPath.."\\Roll-NoResponse",
 		shouldRoll = false,
 		button = false,
-	},]]
+	},
 	{
 		type = "Pending",
 		icon = texturesPath.."\\Roll-Pending",

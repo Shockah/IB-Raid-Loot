@@ -130,3 +130,13 @@ function prototype:SetLoot(loot)
 
 	self.itemContainer:SetHeight(cellHeight * S:Count(loot) + cellSpacing * (S:Count(loot) - 1))
 end
+
+function prototype:Update()
+	if self:IsVisible() then
+		for _, lootFrame in pairs(self.itemFrames) do
+			if lootFrame:IsVisible() then
+				lootFrame:UpdateButtonAppearance()
+			end
+		end
+	end
+end

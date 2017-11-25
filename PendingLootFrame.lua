@@ -71,7 +71,17 @@ function Class:New(parentFrame)
 
 	frame.pendingButton.icon = frame.pendingButton:CreateTexture(nil, "ARTWORK")
 	frame.pendingButton.icon:SetAllPoints(true)
-	frame.pendingButton.icon:SetTexture(pendingRollType.icon.."-Down")
+	frame.pendingButton.icon:SetTexture(pendingRollType.icon)
+
+	local noResponseRollType = Addon.rollTypes["No Response"]
+
+	frame.noResponseButton = CreateFrame("Button", nil, frame.container)
+	frame.noResponseButton:SetSize(20, 20)
+	frame.noResponseButton.rollType = noResponseRollType
+
+	frame.noResponseButton.icon = frame.noResponseButton:CreateTexture(nil, "ARTWORK")
+	frame.noResponseButton.icon:SetAllPoints(true)
+	frame.noResponseButton.icon:SetTexture(noResponseRollType.icon)
 
 	frame.timerHighlight = frame.container:CreateTexture(nil, "BACKGROUND")
 	frame.timerHighlight:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 0, 0)
@@ -109,10 +119,12 @@ local function SetupFrame(frame)
 
 			local r, g, b = 0.5, 0.5, 0.5
 			if frame.loot:IsPendingLocalRoll() then
-				if f >= 0.2 and f < 0.5 then
-					r, g, b = unpack(S:Lerp((f - 0.2) / 0.3, { 1.0, 1.0, 0.0 }, { 0.5, 0.5, 0.5 }))
-				elseif f < 0.2 then
-					r, g, b = unpack(S:Lerp(f / 0.2, { 1.0, 0.0, 0.0 }, { 1.0, 1.0, 0.0 }))
+				if f >= 0.3 and f < 0.5 then
+					r, g, b = unpack(S:Lerp((f - 0.3) / 0.2, { 1.0, 1.0, 0.0 }, { 0.5, 0.5, 0.5 }))
+				elseif f >= 0.1 and f < 0.3 then
+					r, g, b = unpack(S:Lerp((f - 0.1) / 0.2, { 1.0, 0.0, 0.0 }, { 1.0, 1.0, 0.0 }))
+				elseif f < 0.1 then
+					r, g, b = 1.0, 0.0, 0.0
 				end
 			end
 			frame.timerHighlight:SetColorTexture(r, g, b, 0.3)
@@ -232,20 +244,23 @@ function prototype:SetLoot(loot)
 			end
 		end
 
-		self.pendingButton:SetScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-			GameTooltip:ClearLines()
-			self.rollType:AddToTooltip(loot, S:Filter(loot.rolls, function(roll)
-				return roll.type == self.rollType.type
-			end), loot.cacheIsEquippable)
-			GameTooltip:Show()
-		end)
-		self.pendingButton:SetScript("OnLeave", function(self)
-			GameTooltip:Hide()
-		end)
+		local extraButtons = { self.pendingButton, self.noResponseButton }
+		for _, extraButton in pairs(extraButtons) do
+			extraButton:SetScript("OnEnter", function(self)
+				GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+				GameTooltip:ClearLines()
+				self.rollType:AddToTooltip(loot, S:Filter(loot.rolls, function(roll)
+					return roll.type == self.rollType.type
+				end), loot.cacheIsEquippable)
+				GameTooltip:Show()
+			end)
+			extraButton:SetScript("OnLeave", function(self)
+				GameTooltip:Hide()
+			end)
 
-		self.pendingButton:ClearAllPoints()
-		self.pendingButton:SetPoint("RIGHT", self.container, "RIGHT", -6, -self:GetHeight() / 6)
+			extraButton:ClearAllPoints()
+			extraButton:SetPoint("RIGHT", self.container, "RIGHT", -6, -self:GetHeight() / 6)
+		end
 
 		self:UpdateButtonAppearance()
 	end)
@@ -282,10 +297,14 @@ function prototype:UpdateButtonAppearance()
 	end
 
 	if self.loot:HasPendingRolls() then
-		self.pendingButton.icon:SetTexture(self.pendingButton.rollType.icon)
 		self.pendingButton.icon:SetVertexColor(0.4, 0.4, 0.4)
 		self.pendingButton:Show()
+
+		self.noResponseButton:Hide()
 	else
+		self.noResponseButton.icon:SetVertexColor(0.4, 0.4, 0.4)
+		self.noResponseButton:Show()
+
 		self.pendingButton:Hide()
 	end
 end
