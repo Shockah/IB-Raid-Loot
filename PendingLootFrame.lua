@@ -76,7 +76,7 @@ function Class:New(parentFrame)
 	frame.timerHighlight = frame.container:CreateTexture(nil, "BACKGROUND")
 	frame.timerHighlight:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 0, 0)
 	frame.timerHighlight:SetPoint("BOTTOMLEFT", frame.container, "BOTTOMLEFT", 0, 0)
-	frame.timerHighlight:SetColorTexture(1.0, 1.0, 1.0, 0.15)
+	frame.timerHighlight:SetColorTexture(0.5, 0.5, 0.5, 0.3)
 
 	table.insert(instances, frame)
 	return frame
@@ -93,6 +93,29 @@ local function SetupFrame(frame)
 	frame.nameLabel:ClearAllPoints()
 	frame.nameLabel:SetPoint("TOPLEFT", frame.container, "TOPLEFT", 8, -8)
 	frame.nameLabel:SetPoint("RIGHT", frame.container, "RIGHT", 0, 0)
+
+	frame.timerHighlight:SetWidth(frame.container:GetWidth())
+	frame.container:SetScript("OnUpdate", function(self)
+		if (not frame.loot.startTime) or (not frame.loot.timeout) then
+			frame.timerHighlight:SetWidth(0)
+			return
+		end
+
+		local f = (GetTime() - frame.loot.startTime) / frame.loot.timeout
+		f = 1 - f
+		f = math.min(math.max(f, 0), 1)
+		frame.timerHighlight:SetWidth(self:GetWidth() * f)
+
+		local r, g, b
+		if f >= 0.2 and f < 0.5 then
+			r, g, b = unpack(S:Lerp((f - 0.2) / 0.3, { 1.0, 1.0, 0.0 }, { 0.5, 0.5, 0.5 }))
+		elseif f < 0.2 then
+			r, g, b = unpack(S:Lerp(f / 0.2, { 1.0, 0.0, 0.0 }, { 1.0, 1.0, 0.0 }))
+		else
+			r, g, b = 0.5, 0.5, 0.5
+		end
+		frame.timerHighlight:SetColorTexture(r, g, b, 0.3)
+	end)
 	
 	frame.icon:SetScript("OnUpdate", function(self)
 		local availableHeight = frame:GetHeight() - 12

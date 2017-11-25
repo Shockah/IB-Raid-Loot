@@ -247,6 +247,26 @@ function Self:InsertInChatEditbox(text)
 end
 
 ------------------------------
+-- interpolation
+------------------------------
+
+function Self:Lerp(f, a, b)
+	if type(a) == "table" and type(b) == "table" then
+		local result = {}
+		for i = 1, #a do
+			result[i] = self:LerpValue(f, a[i], b[i])
+		end
+		return result
+	else
+		return self:LerpValue(f, a, b)
+	end
+end
+
+function Self:LerpValue(f, a, b)
+	return a + (b - a) * f
+end
+
+------------------------------
 -- tooltip
 ------------------------------
 
