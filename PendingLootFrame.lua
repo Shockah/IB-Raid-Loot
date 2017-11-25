@@ -113,6 +113,7 @@ function Class:New(parentFrame)
 				table.insert(menus, {
 					text = rollType,
 					isTitle = true,
+					icon = Addon.rollTypes[rollType].icon,
 				})
 				for _, rollObj in pairs(groupedRollObjs) do
 					local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
