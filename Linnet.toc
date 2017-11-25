@@ -23,6 +23,8 @@ LootHistory.lua
 Roll.lua
 
 LootMessage.lua
+RollMessage.lua
+RollValuesMessage.lua
 
 PendingFrame.lua
 PendingLootFrame.lua

@@ -9,6 +9,7 @@
 	* rolls: table -- list of rolls
 	* startTime: int -- time the rolling started at
 	* timeout: int -- startTime + timeout to end at
+	* hideRollsUntilFinished: bool -- initially coming from DB.Settings; hide rollers until rolling is finished
 	* cacheIsEquippable: bool -- cached: is item equippable
 ]]
 
@@ -65,6 +66,7 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.isNew = (isNew == nil and true or isNew)
 	obj.rolls = {}
 	obj.cacheIsEquippable = false
+	obj.hideRollsUntilFinished = Addon.DB.Settings.Master.HideRollsUntilFinished
 	return obj
 end
 
@@ -108,16 +110,22 @@ function prototype:AddToHistory(lootHistory, timeout)
 	table.insert(lootHistory.loot, self)
 end
 
-function prototype:GetLocalRoll()
-	local myself = S:GetPlayerNameWithRealm()
+function prototype:GetRollForPlayer(player)
+	local player = S:GetPlayerNameWithRealm(player)
 	return S:FilterFirst(self.rolls, function(roll)
-		return roll.player == myself
+		return roll.player == player
 	end)
 end
 
 function prototype:IsPendingLocalRoll()
-	local localRoll = self:GetLocalRoll()
+	local localRoll = self:GetRollForPlayer()
 	return localRoll and localRoll.type == "Pending"
+end
+
+function prototype:HasPendingRolls()
+	return S:FilterContains(self.rolls, function(roll)
+		return roll.type == "Pending"
+	end)
 end
 
 function prototype:GetAvailableRollTypes()
@@ -142,14 +150,14 @@ function prototype:GetAvailableRollTypes()
 			return S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
 		end)
 		local isWrongClass = S:FilterContains(left, function(line)
-			if round(line.r * 255) == 255 and round(line.g * 255) == 32 and round(line.b * 255) == 32 then
+			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
 				return S:StringStartsWith(line.text, "Class: ") or S:StringStartsWith(line.text, "Classes: ")
 			else
 				return false
 			end
 		end)
 		local isWrongWeaponType = S:FilterContains(left, function(line)
-			if round(line.r * 255) == 255 and round(line.g * 255) == 32 and round(line.b * 255) == 32 then
+			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
 				for _, weaponType in pairs(weaponTypes) do
 					if weaponType == line.text then
 						return true

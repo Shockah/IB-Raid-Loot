@@ -23,6 +23,17 @@ function Class:New(items, callback)
 	return obj
 end
 
+local function GetActiveRequestForItem(item)
+	for _, activeRequest in pairs(activeRequests) do
+		for _, activeRequestItem in pairs(activeRequest.items) do
+			if activeRequestItem == item then
+				return activeRequest
+			end
+		end
+	end
+	return nil
+end
+
 function Class:Get(items, callback)
 	local infos = {}
 	local hasAllInfos = true
@@ -55,17 +66,6 @@ function Class:HandleItemInfoResponse(itemID)
 			return
 		end
 	end
-end
-
-local function GetActiveRequestForItem(item)
-	for _, activeRequest in pairs(activeRequests) do
-		for _, activeRequestItem in pairs(activeRequest.items) do
-			if activeRequestItem == item then
-				return activeRequest
-			end
-		end
-	end
-	return nil
 end
 
 function prototype:IsFinished()

@@ -40,6 +40,15 @@ function Self:DumpTable(tbl, indent)
 end
 
 ------------------------------
+-- numbers
+------------------------------
+
+function Self:Round(n, mult)
+    mult = mult or 1
+    return math.floor((n + mult / 2) / mult) * mult
+end
+
+------------------------------
 -- strings
 ------------------------------
 

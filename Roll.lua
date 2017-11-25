@@ -23,7 +23,11 @@ function Class:New(player, type, values)
 	return obj
 end
 
-function Class:SortFunction(a, b)
+local function SortFunction(a, b)
+	if a == nil or b == nil then
+		return b == nil
+	end
+
 	local aType = Addon.rollTypes[a.type]
 	local bType = Addon.rollTypes[b.type]
 
@@ -37,8 +41,8 @@ function Class:SortFunction(a, b)
 		while continue do
 			index = index + 1
 
-			local aValue = a.values[i]
-			local bValue = b.values[i]
+			local aValue = a.values[index]
+			local bValue = b.values[index]
 
 			if aValue == nil or bValue == nil then
 				if aValue == nil and bValue == nil then
@@ -55,6 +59,10 @@ function Class:SortFunction(a, b)
 	return a.player < b.player
 end
 
+function Class:Sort(rolls)
+	table.sort(rolls, SortFunction)
+end
+
 function prototype:AddToTooltip()
 	GameTooltip:AddDoubleLine(
 		S:GetPlayerNameWithOptionalRealm(self.player),
@@ -67,7 +75,21 @@ end
 function prototype:SetType(type)
 	self.type = type
 	S:Clear(self.values)
+	if Addon:IsMasterLooter() then
+		self:RollAgain()
+	end
+end
+
+function prototype:RollAgain()
 	if Addon.rollTypes[self.type].shouldRoll then
 		table.insert(self.values, random(100))
+	end
+end
+
+function prototype:SendRoll(loot)
+	if Addon:IsMasterLooter() then
+		Addon.RollValuesMessage:New(loot, self):Send()
+	else
+		Addon.RollMessage:New(loot, self.type):Send()
 	end
 end

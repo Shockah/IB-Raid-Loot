@@ -71,6 +71,12 @@ local rollTypes = {
 		shouldRoll = false,
 		button = true,
 	},
+	--[[{
+		type = "No Response",
+		icon = texturesPath.."\\Roll-NoResponse",
+		shouldRoll = false,
+		button = false,
+	},]]
 	{
 		type = "Pending",
 		icon = texturesPath.."\\Roll-Pending",
@@ -98,7 +104,10 @@ local function AddLinesToTooltip(self, rolls, onlyLocal)
 	end
 end
 
-function prototype:AddToTooltip(allRolls, rolls, equippable)
+function prototype:AddToTooltip(loot, rolls, equippable)
+	local sortedRolls = S:Clone(rolls)
+	Addon.Roll:Sort(sortedRolls)
+
 	GameTooltip:AddLine(self.type, 1.0, 1.0, 1.0)
 	if self.description then
 		local description = self.description
@@ -108,15 +117,9 @@ function prototype:AddToTooltip(allRolls, rolls, equippable)
 		GameTooltip:AddLine(description, 0.8, 0.8, 0.8, true)
 	end
 
-	local onlyLocal = Addon.DB.Settings.Master.HideRollsUntilFinished and self.type ~= "Pending"
-	if onlyLocal then
-		onlyLocal = S:FilterContains(allRolls, function(roll)
-			return roll.type == "Pending"
-		end)
-	end
-
+	local onlyLocal = loot and loot.hideRollsUntilFinished and self.type ~= "Pending" and loot:HasPendingRolls()
 	GameTooltip:AddLine("")
-	AddLinesToTooltip(self, rolls, onlyLocal)
+	AddLinesToTooltip(self, sortedRolls, onlyLocal)
 end
 
 for index, rollType in pairs(rollTypes) do

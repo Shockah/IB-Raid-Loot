@@ -30,9 +30,13 @@ function Addon:OnCommReceived(prefix, data, distribution, sender)
 	self:OnDecompressedCommReceived(final.Type, final.Body, distribution, sender)
 end
 
-function Addon:OnCommDecompressedReceived(type, obj, distribution, sender)
+function Addon:OnDecompressedCommReceived(type, obj, distribution, sender)
 	if type == "Loot" then
-		self.LootMessage:Handle(obj)
+		self.LootMessage:Handle(obj, distribution, sender)
+	elseif type == "Roll" then
+		self.RollMessage:Handle(obj, distribution, sender)
+	elseif type == "RollValues" then
+		self.RollValuesMessage:Handle(obj, distribution, sender)
 	end
 end
 

@@ -101,20 +101,25 @@ local function SetupFrame(frame)
 			return
 		end
 
-		local f = (GetTime() - frame.loot.startTime) / frame.loot.timeout
-		f = 1 - f
-		f = math.min(math.max(f, 0), 1)
-		frame.timerHighlight:SetWidth(self:GetWidth() * f)
+		if frame.loot:HasPendingRolls() then
+			local f = (GetTime() - frame.loot.startTime) / frame.loot.timeout
+			f = 1 - f
+			f = math.min(math.max(f, 0), 1)
+			frame.timerHighlight:SetWidth(self:GetWidth() * f)
 
-		local r, g, b
-		if f >= 0.2 and f < 0.5 then
-			r, g, b = unpack(S:Lerp((f - 0.2) / 0.3, { 1.0, 1.0, 0.0 }, { 0.5, 0.5, 0.5 }))
-		elseif f < 0.2 then
-			r, g, b = unpack(S:Lerp(f / 0.2, { 1.0, 0.0, 0.0 }, { 1.0, 1.0, 0.0 }))
+			local r, g, b = 0.5, 0.5, 0.5
+			if frame.loot:IsPendingLocalRoll() then
+				if f >= 0.2 and f < 0.5 then
+					r, g, b = unpack(S:Lerp((f - 0.2) / 0.3, { 1.0, 1.0, 0.0 }, { 0.5, 0.5, 0.5 }))
+				elseif f < 0.2 then
+					r, g, b = unpack(S:Lerp(f / 0.2, { 1.0, 0.0, 0.0 }, { 1.0, 1.0, 0.0 }))
+				end
+			end
+			frame.timerHighlight:SetColorTexture(r, g, b, 0.3)
+			frame.timerHighlight:Show()
 		else
-			r, g, b = 0.5, 0.5, 0.5
+			frame.timerHighlight:Hide()
 		end
-		frame.timerHighlight:SetColorTexture(r, g, b, 0.3)
 	end)
 	
 	frame.icon:SetScript("OnUpdate", function(self)
@@ -183,7 +188,7 @@ function prototype:SetLoot(loot)
 					end
 					GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 					GameTooltip:ClearLines()
-					self.rollType:AddToTooltip(loot.rolls, S:Filter(loot.rolls, function(roll)
+					self.rollType:AddToTooltip(loot, S:Filter(loot.rolls, function(roll)
 						return roll.type == self.rollType.type
 					end), loot.cacheIsEquippable)
 					GameTooltip:Show()
@@ -210,11 +215,11 @@ function prototype:SetLoot(loot)
 						return
 					end
 
-					local localRoll = loot:GetLocalRoll()
+					local localRoll = loot:GetRollForPlayer()
 					localRoll:SetType(self.rollType.type)
 					outerSelf:UpdateButtonAppearance()
 
-					-- TODO: send roll
+					localRoll:SendRoll(loot)
 				end)
 
 				rollButton:ClearAllPoints()
@@ -230,7 +235,7 @@ function prototype:SetLoot(loot)
 		self.pendingButton:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:ClearLines()
-			self.rollType:AddToTooltip(loot.rolls, S:Filter(loot.rolls, function(roll)
+			self.rollType:AddToTooltip(loot, S:Filter(loot.rolls, function(roll)
 				return roll.type == self.rollType.type
 			end), loot.cacheIsEquippable)
 			GameTooltip:Show()
@@ -262,12 +267,8 @@ function prototype:UpdateButtonAppearance()
 			end
 			rollButton.icon:SetVertexColor(1.0, 1.0, 1.0)
 		end
-
-		self.pendingButton.icon:SetTexture(self.pendingButton.rollType.icon)
-		self.pendingButton.icon:SetVertexColor(0.4, 0.4, 0.4)
-		self.pendingButton:Show()
 	else
-		local localRoll = self.loot:GetLocalRoll()
+		local localRoll = self.loot:GetRollForPlayer()
 		local localRollType = localRoll and localRoll.type or nil
 
 		for _, rollButton in pairs(self.rollButtons) do
@@ -278,7 +279,13 @@ function prototype:UpdateButtonAppearance()
 				rollButton.icon:SetVertexColor(0.4, 0.4, 0.4)
 			end
 		end
+	end
 
+	if self.loot:HasPendingRolls() then
+		self.pendingButton.icon:SetTexture(self.pendingButton.rollType.icon)
+		self.pendingButton.icon:SetVertexColor(0.4, 0.4, 0.4)
+		self.pendingButton:Show()
+	else
 		self.pendingButton:Hide()
 	end
 end

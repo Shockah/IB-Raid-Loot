@@ -10,7 +10,7 @@ Addon.Settings = {
 	Debug = {
 		Settings = true,
 		Messages = true,
-		AlwaysMasterLooter = true,
+		AlwaysMasterLooter = false,
 	},
 	AceCommPrefix = "Linnet",
 	LootAssignTimeout = 2, -- seconds
@@ -35,7 +35,7 @@ function Addon:OnInitialize()
 				Master = {
 					RollTimeout = 120, -- seconds
 					QualityThreshold = LE_ITEM_QUALITY_EPIC, -- minimum quality to consider
-					HideRollsUntilFinished = true,
+					HideRollsUntilFinished = true, -- hide rollers until rolling is finished
 					AutoProceed = { -- automatically distribute loot when all the rolls are done
 						Enabled = false,
 						OnlyIfEveryoneResponded = true,
@@ -88,7 +88,7 @@ function Addon:IsMasterLooter()
 	end
 
 	local lootMethod, masterLooterPartyID, masterLooterRaidID = GetLootMethod()
-	return lootMethod == "master" and partyMaster == 0
+	return lootMethod == "master" and masterLooterPartyID == 0
 end
 
 function Addon:OnLootReady()
