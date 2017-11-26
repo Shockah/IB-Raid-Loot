@@ -42,7 +42,7 @@ function Class:Handle(message, distribution, sender)
 	local roll = nil
 	local player = message.player
 	if player then
-		player = S:GetPlayerNameWithRealm(message.player)
+		player = S:GetPlayerNameWithRealm(player)
 		roll = loot:GetRollForPlayer(player)
 	end
 

@@ -474,10 +474,10 @@ function prototype:LootAssigned(cancelAll)
 		assignment.roll.assigned = true
 		self:AnnounceWinner(assignment.roll)
 		table.insert(self.assigned, assignment)
-		Addon.LootAssignedMessage:New(self, assignment.roll)
+		Addon.LootAssignedMessage:New(self, assignment.roll):Send()
 	else
 		table.insert(self.assigned, {})
-		Addon.LootAssignedMessage:New(self, nil)
+		Addon.LootAssignedMessage:New(self, nil):Send()
 	end
 
 	if Addon.PendingFrame.frame then

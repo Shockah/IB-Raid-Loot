@@ -78,7 +78,7 @@ function Addon:OnInitialize()
 							xOffset = 16,
 							yOffset = 0,
 						},
-						Size = { 250, 350 },
+						Size = { 320, 350 },
 						Cell = {
 							Height = 60,
 							Spacing = -6,
