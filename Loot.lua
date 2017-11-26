@@ -201,7 +201,10 @@ function prototype:GetAvailableRollTypes(universal)
 		tooltip:SetHyperlink(self.link)
 	end, function(left, right)
 		local isUncreatedSetPiece = S:FilterContains(left, function(line)
-			return S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
+			return
+				S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
+				or
+				(S:StringStartsWith(line.text, "Use: Create a soulbound Tier ") and S:StringEndsWith(line.text, " item appropriate for your class."))
 		end)
 		local isWrongClass = S:FilterContains(left, function(line)
 			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
