@@ -48,9 +48,8 @@ function Class:Handle(message, distribution, sender)
 	roll:SetType(message.type)
 	roll:SendRoll(loot)
 
-	if not loot:HandleDoneRollingActions() then
-		if Addon.PendingFrame.frame then
-			Addon.PendingFrame.frame:Update()
-		end
+	loot:HandleDoneRollingActions()
+	if Addon.PendingFrame.frame then
+		Addon.PendingFrame.frame:Update()
 	end
 end

@@ -13,6 +13,7 @@ Addon.Settings = {
 	AceCommPrefix = "Linnet",
 	LootAssignTimeout = 2, -- seconds
 	LootReadyBucketPeriod = 0.2, -- seconds
+	MaxRollValue = 3,
 }
 
 local isLootWindowOpen = false

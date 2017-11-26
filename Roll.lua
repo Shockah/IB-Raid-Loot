@@ -94,20 +94,17 @@ end
 
 function prototype:RollAgain()
 	if Addon.rollTypes[self.type].shouldRoll then
-		table.insert(self.values, random(100))
+		table.insert(self.values, random(Addon.Settings.MaxRollValue))
 	end
 end
 
 function prototype:SendRoll(loot)
-	if Addon.Settings.Debug.DebugMode then
-		loot:HandleDoneRollingActions()
+	if Addon:IsMasterLooter() then
+		Addon.RollValuesMessage:New(loot, self):Send()
 	else
-		if Addon:IsMasterLooter() then
-			Addon.RollValuesMessage:New(loot, self):Send()
-		else
-			Addon.RollMessage:New(loot, self.type):Send()
-		end
+		Addon.RollMessage:New(loot, self.type):Send()
 	end
+	loot:HandleDoneRollingActions()
 end
 
 function prototype:GetCurrentCandidateIndex(slotIndex)

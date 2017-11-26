@@ -294,55 +294,61 @@ end
 
 function prototype:HandleDoneRollingActions()
 	if self:HasPendingRolls() then
-		return false
+		return
 	end
 
 	if self.timeoutTimer then
 		Addon:CancelTimer(self.timeoutTimer)
+		self.timeoutTimer = nil
 	end
 
-	if Addon.PendingFrame.frame then
-		Addon.PendingFrame.frame:Update()
-	end
+	local sortedRolls = S:Clone(self.rolls)
+	Addon.Roll:Sort(sortedRolls)
 
-	if (not S:IsEmpty(self.rolls)) and (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) then
+	if Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode then
+		if #sortedRolls > self.quantity then
+			local lastRoll = sortedRolls[self.quantity]
+			local nextRoll = sortedRolls[self.quantity + 1]
+
+			if #sortedRolls > self.quantity and lastRoll.type == nextRoll.type and lastRoll.values[#lastRoll.values] == nextRoll.values[#nextRoll.values] then
+				for i = 1, self.quantity do
+					sortedRolls[i].values:RollAgain()
+					sortedRolls[i]:SendRoll(self)
+				end
+				self:HandleDoneRollingActions()
+				return
+			else
+				for i = 1, self.quantity do
+					self:AssignLoot(sortedRolls[i])
+				end
+			end
+		else
+			for i = 1, self.quantity do
+				self:AssignLoot(sortedRolls[i])
+			end
+		end
+
 		if Addon.DB.Settings.Master.AutoProceed.Enabled then
-			local everyonePassed = not S:FilterContains(self.rolls, function(roll)
-				return roll.type ~= "Pass"
-			end)
-			local everyoneResponded = not S:FilterContains(self.rolls, function(roll)
-				return roll.type == "No Response"
-			end)
+			if not S:IsEmpty(self.rolls) then
+				local everyonePassed = not S:FilterContains(self.rolls, function(roll)
+					return roll.type ~= "Pass"
+				end)
+				local everyoneResponded = not S:FilterContains(self.rolls, function(roll)
+					return roll.type == "No Response"
+				end)
 
-			if (not everyonePassed) and everyoneResponded or (not Addon.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded) then
-				local sortedRolls = S:Clone(self.rolls)
-				Addon.Roll:Sort(sortedRolls)
-
-				if #sortedRolls > self.quantity then
-					local lastRoll = sortedRolls[self.quantity]
-					local nextRoll = sortedRolls[self.quantity]
-
-					if #sortedRolls > self.quantity and lastRoll.type == nextRoll.type and lastRoll.values[#lastRoll.values] == nextRoll.values[#nextRoll.values] then
-						for i = 1, self.quantity do
-							sortedRolls[i].values:RollAgain()
-							sortedRolls[i]:SendRoll(self)
-						end
-						self:HandleDoneRollingActions()
-					else
-						for i = 1, self.quantity do
-							self:AssignLoot(sortedRolls[i])
-						end
-					end
-				else
+				if (not everyonePassed) and everyoneResponded or (not Addon.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded) then
 					for i = 1, self.quantity do
 						self:AssignLoot(sortedRolls[i])
 					end
 				end
 			end
 		end
-	end
 
-	return true
+		if Addon.PendingFrame.frame then
+			Addon.PendingFrame.frame:Update()
+		end
+	end
 end
 
 function prototype:AnnounceWinner(roll)
