@@ -126,26 +126,42 @@ function Class:New(parentFrame)
 			local groupedRolls = S:Group(sortedRolls, function(roll)
 				return roll.type
 			end)
+
+			local sorted2Rolls = {}
+			for rollType, groupedRollObjs in pairs(groupedRolls) do
+				table.insert(sorted2Rolls, {
+					type = rollType,
+					rolls = groupedRollObjs,
+				})
+			end
+			table.sort(sorted2Rolls, function(a, b)
+				return Addon.rollTypes[a.type].index < Addon.rollTypes[b.type].index
+			end)
+
 			if not S:IsEmpty(alreadyAssignedRolls) then
-				groupedRolls["Already assigned"] = alreadyAssignedRolls
+				table.insert(sorted2Rolls, {
+					type = "Already assigned",
+					rolls = alreadyAssignedRolls,
+				})
 			end
 
 			local menus = {}
 			local submenus = {}
-			for rollType, groupedRollObjs in pairs(groupedRolls) do
+			for _, group in pairs(sorted2Rolls) do
 				local menusToUse = S:IsEmpty(menus) and menus or submenus
-				table.insert(menus, {
-					text = rollType,
+				local rollType = Addon.rollTypes[rollType]
+				table.insert(menusToUse, {
+					text = group.type,
 					isTitle = true,
-					icon = Addon.rollTypes[rollType].icon,
+					icon = rollType and rollType.icon or nil,
 				})
-				for _, rollObj in pairs(groupedRollObjs) do
+				for _, rollObj in pairs(group.rolls) do
 					local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
 					local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
 					local valuesStr = S:Join(", ", rollObj.values)
 					valuesStr = S:IsBlankString(valuesStr) and "" or ": "..valuesStr
 
-					table.insert(menus, {
+					table.insert(menusToUse, {
 						text = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r"..valuesStr,
 						func = function()
 							frame.loot:AssignLoot(rollObj)
@@ -415,7 +431,7 @@ function prototype:UpdateButtonAppearance()
 		self.pendingButton:Hide()
 	end
 
-	if self.loot:IsFullyAssigned() then
+	if ((not Addon:IsMasterLooter()) and (not Addon.Settings.Debug.DebugMode)) or self.loot:IsFullyAssigned() then
 		self.assignButton:Hide()
 	else
 		self.assignButton:Show()

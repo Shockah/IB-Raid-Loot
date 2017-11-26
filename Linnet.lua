@@ -1,10 +1,8 @@
 local selfAddonName = "Linnet"
 
-Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceComm-3.0", "AceBucket-3.0", "AceTimer-3.0")
+Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 local Addon = Linnet
 local S = LibStub:GetLibrary("ShockahUtils")
-
---local LibWindow = LibStub("LibWindow-1.1")
 
 Addon.Settings = {
 	Debug = {
@@ -30,6 +28,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 		if button == "LeftButton" then
 			local pendingFrame = Addon.PendingFrame:Get()
 			pendingFrame:SetLoot(Addon.lootHistory.loot)
+			pendingFrame:Update()
 			pendingFrame:Show()
 		elseif button == "RightButton" then
 			Addon:ShowMinimapDropdown(self)
@@ -47,7 +46,7 @@ function Addon:OnInitialize()
 	self.lootHistory = self.LootHistory:New()
 
 	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", "OnItemInfoReceived")
-	self:RegisterBucketEvent("LOOT_READY", self.Settings.LootReadyBucketPeriod, "OnLootReady")
+	self:RegisterEvent("LOOT_READY", "OnLootReady")
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 	self:RegisterEvent("LOOT_SLOT_CLEARED", "OnLootSlotCleared")
 
@@ -267,7 +266,7 @@ end
 
 function Addon:OnLootReady()
 	isLootWindowOpen = true
-	if not self:IsMasterLooter() and not self.Settings.Debug.DebugMode then
+	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
 		return
 	end
 
@@ -293,7 +292,6 @@ function Addon:OnLootReady()
 
 					if loot.isNew then
 						loot.quantity = loot.quantity + 1
-						self:DebugPrint("New loot item: "..loot.link.." x"..loot.quantity)
 					end
 				end
 			end
@@ -309,12 +307,18 @@ function Addon:OnLootReady()
 
 		local pendingFrame = self.PendingFrame:Get()
 		pendingFrame:SetLoot(newLoot)
+		pendingFrame:Update()
 		pendingFrame:Show()
 	end
 end
 
 function Addon:OnLootClosed()
 	isLootWindowOpen = false
+	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
+		return
+	end
+
+	cachedLootID = {}
 
 	local loot = S:Filter(self.lootHistory:GetNonAssignedLoot(), function(lootObj)
 		return not S:IsEmpty(lootObj.assigning)
@@ -329,19 +333,20 @@ function Addon:OnLootSlotCleared(event, slotIndex)
 		return
 	end
 
-	local loot = S:FilterFirst(self.lootHistory:GetNonAssignedLoot(), function(lootObj)
-		return not S:IsEmpty(lootObj.assigning)
-	end)
-	if loot then
-		loot:LootAssigned()
-	else
-		local cachedLootID = lootCache[slotIndex]
-		local loot = S:FilterFirst(self.lootHistory:GetNonAssignedLoot(), function(lootObj)
-			return lootObj.lootID == cachedLootID
-		end)
+	local cachedLootID = lootCache[slotIndex]
+	if not cachedLootID then
+		return
+	end
 
-		if loot then
-			table.insert(loot.assigned, {})
+	local loot = S:FilterFirst(self.lootHistory.loot, function(lootObj)
+		return lootObj.lootID == cachedLootID
+	end)
+
+	if loot then
+		if S:IsEmpty(loot.assigning) then
+			loot.quantity = loot.quantity - 1
+		else
+			loot:LootAssigned()
 		end
 	end
 end

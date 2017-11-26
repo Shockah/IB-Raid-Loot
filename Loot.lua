@@ -65,6 +65,9 @@ local weaponTypes = {
 	"Two-Handed Sword",
 	"Wand",
 	"Warglaive",
+	"Axe",
+	"Mace",
+	"Sword",
 }
 
 function Class:New(lootID, link, quantity, isNew)
@@ -438,11 +441,13 @@ function prototype:AssignLoot(roll)
 		local lootIndex = self:GetCurrentLootIndex()
 		if not lootIndex then
 			UIErrorsFrame:AddMessage("The item is not available. Is the loot window open?", 1.0, 0.0, 0.0)
+			return
 		end
 
-		local candidateIndex = roll:GetCurrentCandidateIndex()
+		local candidateIndex = roll:GetCurrentCandidateIndex(lootIndex)
 		if not candidateIndex then
 			UIErrorsFrame:AddMessage("Chosen player is not eligible for loot.", 1.0, 0.0, 0.0)
+			return
 		end
 
 		table.insert(self.assigning, {
@@ -452,6 +457,7 @@ function prototype:AssignLoot(roll)
 			end, Addon.Settings.LootAssignTimeout),
 			roll = roll,
 		})
+
 		GiveMasterLoot(lootIndex, candidateIndex)
 	end
 end

@@ -110,9 +110,9 @@ function prototype:SendRoll(loot)
 	end
 end
 
-function prototype:GetCurrentCandidateIndex()
+function prototype:GetCurrentCandidateIndex(slotIndex)
 	for i = 1, MAX_RAID_MEMBERS do
-		local candidate = GetMasterLootCandidate(i)
+		local candidate = GetMasterLootCandidate(slotIndex, i)
 		if S:GetPlayerNameWithRealm(candidate) == self.player then
 			return i
 		end
