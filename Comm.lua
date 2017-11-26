@@ -37,6 +37,8 @@ function Addon:OnDecompressedCommReceived(type, obj, distribution, sender)
 		self.RollMessage:Handle(obj, distribution, sender)
 	elseif type == "RollValues" then
 		self.RollValuesMessage:Handle(obj, distribution, sender)
+	elseif type == "LootAssigned" then
+		self.LootAssignedMessage:Handle(obj, distribution, sender)
 	end
 end
 
