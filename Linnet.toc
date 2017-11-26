@@ -8,7 +8,6 @@
 
 # Embedded Ace 3.0 Libraries
 embeds.xml
-Libs/MSA-DropDownMenu-1.0/MSA-DropDownMenu-1.0.xml
 
 # Custom libs
 ShockahUtils.lua

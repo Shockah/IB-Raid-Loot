@@ -38,6 +38,10 @@ function prototype:Send()
 end
 
 function Class:Handle(message, distribution, sender)
+	if not Addon:IsMasterLooter() then
+		return
+	end
+
 	local loot = Addon.lootHistory:Get(message.lootID)
 	if not loot then
 		return

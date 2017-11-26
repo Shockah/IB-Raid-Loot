@@ -227,12 +227,10 @@ local function SetupFrame(frame)
 			frame.timerHighlight:SetWidth(self:GetWidth())
 			frame.timerHighlight:SetColorTexture(0.5, 0.5, 1.0, 0.3)
 			frame.timerHighlight:Show()
-		elseif (Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode) then
+		else
 			frame.timerHighlight:SetWidth(self:GetWidth())
 			frame.timerHighlight:SetColorTexture(0.0, 1.0, 0.0, 0.3)
 			frame.timerHighlight:Show()
-		else
-			frame.timerHighlight:Hide()
 		end
 	end)
 	
@@ -265,10 +263,6 @@ function prototype:Free()
 end
 
 function prototype:SetLoot(loot)
-	if self.loot == loot then
-		return
-	end
-
 	self.loot = loot
 
 	Addon.ItemInfoRequest:Get({ loot.link }, function(itemInfos)
@@ -287,7 +281,7 @@ function prototype:SetLoot(loot)
 		self.nameLabel:SetText(itemName)
 		self.nameLabel:SetTextColor(r, g, b, 1)
 
-		local availableRollTypes = loot:GetAvailableRollTypes()
+		local availableRollTypes = loot:GetAvailableRollTypes(not loot:IsPendingLocalRoll())
 
 		local outerSelf = self
 		local index = 1
@@ -367,7 +361,7 @@ function prototype:SetLoot(loot)
 		if loot.cacheIsUnusable and (not loot.wasDisplayed) and Addon.DB.Settings.Raider.AutoPassUnusable then
 			if loot:IsPendingLocalRoll() then
 				local localRoll = loot:GetRollForPlayer()
-				localRoll:SetType("Pass")
+				localRoll:SetType(loot.cacheDisenchant and "Disenchant" or "Pass")
 
 				localRoll:SendRoll(loot)
 			end
@@ -376,6 +370,10 @@ function prototype:SetLoot(loot)
 		self:UpdateButtonAppearance()
 		loot.wasDisplayed = true
 	end)
+end
+
+function prototype:Update()
+	self:SetLoot(self.loot)
 end
 
 function prototype:UpdateButtonAppearance()

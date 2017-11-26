@@ -135,7 +135,7 @@ function prototype:Update()
 	if self:IsVisible() then
 		for _, lootFrame in pairs(self.itemFrames) do
 			if lootFrame:IsVisible() then
-				lootFrame:UpdateButtonAppearance()
+				lootFrame:Update()
 			end
 		end
 	end

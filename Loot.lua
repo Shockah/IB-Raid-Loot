@@ -13,6 +13,7 @@
 	* hideRollsUntilFinished: bool -- initially coming from DB.Settings; hide rollers until rolling is finished
 	* cacheIsEquippable: bool -- cached: is item equippable
 	* cacheIsUnusable: bool -- cached: is item unusable (only Off-spec and Pass available)
+	* cacheDisenchant: bool -- cached: whether the item is disenchantable
 	* timeoutTimer: AceTimer ID -- timeout timer
 	* assigning: table -- list of structs:
 		* timer: AceTimer ID -- loot assigning timeout timer
@@ -54,15 +55,9 @@ local weaponTypes = {
 	"Gun",
 	"Fishing Pole",
 	"Fist Weapon",
-	"One-Handed Axe",
-	"One-Handed Mace",
-	"One-Handed Sword",
 	"Polearm",
 	"Staff",
 	"Thrown",
-	"Two-Handed Axe",
-	"Two-Handed Mace",
-	"Two-Handed Sword",
 	"Wand",
 	"Warglaive",
 	"Axe",
@@ -80,6 +75,7 @@ function Class:New(lootID, link, quantity, isNew)
 	obj.rolls = {}
 	obj.cacheIsEquippable = false
 	obj.cacheIsUnusable = false
+	obj.cacheDisenchant = false
 	obj.hideRollsUntilFinished = Addon.DB.Settings.Master.HideRollsUntilFinished
 	obj.assigning = {}
 	obj.assigned = {}
@@ -186,7 +182,7 @@ function prototype:HasPendingRolls()
 	end)
 end
 
-function prototype:GetAvailableRollTypes()
+function prototype:GetAvailableRollTypes(universal)
 	local ENCHANTING_ID = 333
 	local rollTypes = S:Map(S:Filter(Addon.orderedRollTypes, function(rollType)
 		return rollType.button
@@ -240,7 +236,15 @@ function prototype:GetAvailableRollTypes()
 	local isEquippable = isWeapon or isArmor
 	local isWrongArmorType = isArmor and armorType and (not isMiscArmor) and equipLocation ~= "INVTYPE_CLOAK" and armorType ~= classToArmorType[select(2, UnitClass("player"))]
 
-	self.cacheIsEquippable = isEquippable or isUncreatedSetPiece
+	if universal then
+		isWrongClass = false
+		isWrongWeaponType = false
+		isWrongArmorType = false
+	end
+
+	if not universal then
+		self.cacheIsEquippable = isEquippable or isUncreatedSetPiece
+	end
 
 	if isEquippable or isUncreatedSetPiece then
 		if (not isUncreatedSetPiece) or isWeapon then
@@ -258,7 +262,9 @@ function prototype:GetAvailableRollTypes()
 
 			if bindType ~= 0 and bindType ~= 2 then -- 0 = no bind; 2 = BoE
 				S:RemoveValue(rollTypes, "Transmog")
-				self.cacheIsUnusable = true
+				if not universal then
+					self.cacheIsUnusable = true
+				end
 			end
 		end
 
@@ -277,6 +283,9 @@ function prototype:GetAvailableRollTypes()
 
 		if isEnchanter and not isWrongClass then
 			table.insert(rollTypes, "Disenchant")
+			if not universal then
+				self.cacheDisenchant = true
+			end
 		else
 			table.insert(rollTypes, "Pass")
 		end
@@ -290,6 +299,66 @@ function prototype:GetAvailableRollTypes()
 	end
 	
 	return rollTypes
+end
+
+function prototype:FixDuplicateRolls()
+	if self:HasPendingRolls() then
+		return
+	end
+
+	local sortedRolls = S:Filter(self.rolls, function(roll)
+		return Addon.rollTypes[roll.type].shouldRoll
+	end)
+
+	local fixRolls = function(rolls)
+		if S:Count(rolls) < 2 then
+			return {}
+		end
+
+		for _, roll in pairs(rolls) do
+			roll:RollAgain()
+		end
+		return rolls
+	end
+
+	local toSync = {}
+
+	local continue = true
+	while continue do
+		continue = false
+		Addon.Roll:Sort(sortedRolls)
+
+		local equalRolls = {}
+
+		for _, roll in pairs(sortedRolls) do
+			if S:IsEmpty(equalRolls) then
+				table.insert(equalRolls, roll)
+			else
+				local lastRoll = equalRolls[S:Count(equalRolls)]
+				if not roll:IsEqual(lastRoll) then
+					local fixedRolls = fixRolls(equalRolls)
+					for _, roll in pairs(fixedRolls) do
+						S:RemoveValue(toSync, roll)
+						table.insert(toSync, roll)
+						continue = true
+					end
+					S:Clear(equalRolls)
+				end
+				table.insert(equalRolls, roll)
+			end
+		end
+
+		local fixedRolls = fixRolls(equalRolls)
+		for _, roll in pairs(fixedRolls) do
+			S:RemoveValue(toSync, roll)
+			table.insert(toSync, roll)
+			continue = true
+		end
+	end
+
+	for _, toSyncRoll in pairs(toSync) do
+		Addon.RollValuesMessage:New(self, toSyncRoll):Send()
+	end
 end
 
 function prototype:HandleDoneRollingActions()
@@ -306,27 +375,7 @@ function prototype:HandleDoneRollingActions()
 	Addon.Roll:Sort(sortedRolls)
 
 	if Addon:IsMasterLooter() or Addon.Settings.Debug.DebugMode then
-		if #sortedRolls > self.quantity then
-			local lastRoll = sortedRolls[self.quantity]
-			local nextRoll = sortedRolls[self.quantity + 1]
-
-			if #sortedRolls > self.quantity and lastRoll.type == nextRoll.type and lastRoll.values[#lastRoll.values] == nextRoll.values[#nextRoll.values] then
-				for i = 1, self.quantity do
-					sortedRolls[i].values:RollAgain()
-					sortedRolls[i]:SendRoll(self)
-				end
-				self:HandleDoneRollingActions()
-				return
-			else
-				for i = 1, self.quantity do
-					self:AssignLoot(sortedRolls[i])
-				end
-			end
-		else
-			for i = 1, self.quantity do
-				self:AssignLoot(sortedRolls[i])
-			end
-		end
+		self:FixDuplicateRolls()
 
 		if Addon.DB.Settings.Master.AutoProceed.Enabled then
 			if not S:IsEmpty(self.rolls) then
@@ -339,7 +388,9 @@ function prototype:HandleDoneRollingActions()
 
 				if (not everyonePassed) and everyoneResponded or (not Addon.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded) then
 					for i = 1, self.quantity do
-						self:AssignLoot(sortedRolls[i])
+						if sortedRolls[i].type ~= "Pending" and sortedRolls[i].type ~= "No Response" and sortedRolls[i].type ~= "Pass" then
+							self:AssignLoot(sortedRolls[i])
+						end
 					end
 				end
 			end
@@ -406,7 +457,7 @@ function prototype:CancelLootAssigning(all)
 			return finishedAssignment
 		else
 			local assignment = self.assigning[1]
-			Addon:CancelTimer(self.assigning[1])
+			Addon:CancelTimer(self.assigning[1].timer)
 			table.remove(self.assigning, 1)
 			return assignment
 		end

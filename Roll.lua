@@ -52,7 +52,7 @@ local function SortFunction(a, b)
 				else
 					return bValue == nil
 				end
-			else
+			elseif aValue ~= bValue then
 				return aValue > bValue
 			end
 		end
@@ -63,6 +63,25 @@ end
 
 function Class:Sort(rolls)
 	table.sort(rolls, SortFunction)
+end
+
+function prototype:IsEqual(roll)
+	if self.type ~= roll.type then
+		return false
+	end
+
+	if S:Count(self.values) ~= S:Count(roll.values) then
+		return false
+	end
+
+	local count = S:Count(self.values)
+	for i = 1, count do
+		if self.values[i] ~= roll.values[i] then
+			return false
+		end
+	end
+
+	return true
 end
 
 function prototype:AddToTooltip()

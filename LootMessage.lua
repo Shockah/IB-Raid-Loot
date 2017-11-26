@@ -42,6 +42,10 @@ function prototype:Send()
 end
 
 function Class:Handle(message, distribution, sender)
+	if Addon:IsMasterLooter() then
+		return
+	end
+
 	local loot = S:Map(message.loot, function(loot)
 		local lootObj = Addon.Loot:New(loot.lootID, loot.link, loot.quantity, false)
 		lootObj:SetInitialRolls(loot.eligiblePlayers)

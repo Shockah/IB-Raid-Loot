@@ -12,8 +12,7 @@ Addon.Settings = {
 	},
 	AceCommPrefix = "Linnet",
 	LootAssignTimeout = 2, -- seconds
-	LootReadyBucketPeriod = 0.2, -- seconds
-	MaxRollValue = 3,
+	MaxRollValue = 100,
 }
 
 local isLootWindowOpen = false
@@ -222,6 +221,7 @@ function Addon:ShowMinimapDropdown(frame)
 			func = function()
 				S:Clear(Addon.lootHistory.loot)
 				if Addon.PendingFrame.frame then
+					Addon.PendingFrame.frame:SetLoot({})
 					Addon.PendingFrame.frame:Update()
 				end
 			end,
@@ -346,6 +346,10 @@ function Addon:OnLootReady()
 		pendingFrame:SetLoot(newLoot)
 		pendingFrame:Update()
 		pendingFrame:Show()
+	end
+
+	for _, loot in pairs(self.lootHistory.loot) do
+		loot:HandleDoneRollingActions()
 	end
 end
 
