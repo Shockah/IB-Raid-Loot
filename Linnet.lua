@@ -17,8 +17,8 @@ Addon.Settings = {
 }
 
 local isLootWindowOpen = false
-local lootCache = nil
 
+Addon.lootCache = {}
 Addon.dropdown = nil
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
@@ -108,10 +108,14 @@ function Addon:ShowMinimapDropdown(frame)
 		{
 			text = "Master Looter",
 			isTitle = true,
+			notCheckable = true,
 		},
 		{
 			text = timeoutValueToText(self.DB.Settings.Master.RollTimeout),
+			tooltipTitle = "",
 			tooltipText = "Time after which rolls timeout automatically if not responded to.",
+			tooltipOnButton = true,
+			notCheckable = true,
 			func = function(self)
 				local timeoutValues = {30, 60, 90, 120, 180, 300}
 
@@ -133,7 +137,9 @@ function Addon:ShowMinimapDropdown(frame)
 		},
 		{
 			text = "Hide rolls until finished",
+			tooltipTitle = "",
 			tooltipText = "Rolls (other than pending) are hidden until everyone rolls or until the timeout.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Master.HideRollsUntilFinished,
 			func = function()
 				self.DB.Settings.Master.HideRollsUntilFinished = not self.DB.Settings.Master.HideRollsUntilFinished
@@ -142,7 +148,9 @@ function Addon:ShowMinimapDropdown(frame)
 		},
 		{
 			text = "Auto-proceed",
+			tooltipTitle = "",
 			tooltipText = "Automatically assign loot after rolling is finished.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Master.AutoProceed.Enabled,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.Enabled = not self.DB.Settings.Master.AutoProceed.Enabled
@@ -151,7 +159,9 @@ function Addon:ShowMinimapDropdown(frame)
 		},
 		{
 			text = "   Only if everyone responded",
+			tooltipTitle = "",
 			tooltipText = "Only automatically assign loot if actually everyone rolled.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded = not self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded
@@ -160,7 +170,9 @@ function Addon:ShowMinimapDropdown(frame)
 		},
 		{
 			text = "Announce assignees",
+			tooltipTitle = "",
 			tooltipText = "Announce assignees in Raid or Raid Warning chat.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Master.AnnounceWinners.Enabled,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.Enabled = not self.DB.Settings.Master.AnnounceWinners.Enabled
@@ -169,7 +181,9 @@ function Addon:ShowMinimapDropdown(frame)
 		},
 		{
 			text = "   In Raid Warning",
+			tooltipTitle = "",
 			tooltipText = "Use the Raid Warning for announcements.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Master.AnnounceWinners.AsRaidWarning,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.AsRaidWarning = not self.DB.Settings.Master.AnnounceWinners.AsRaidWarning
@@ -180,10 +194,13 @@ function Addon:ShowMinimapDropdown(frame)
 		{
 			text = "Raider",
 			isTitle = true,
+			notCheckable = true,
 		},
 		{
 			text = "Auto-pass unusable",
+			tooltipTitle = "",
 			tooltipText = "Automatically pass equippable loot you can't use.",
+			tooltipOnButton = true,
 			checked = self.DB.Settings.Raider.AutoPassUnusable,
 			func = function()
 				self.DB.Settings.Raider.AutoPassUnusable = not self.DB.Settings.Raider.AutoPassUnusable
@@ -271,7 +288,7 @@ function Addon:OnLootReady()
 		return
 	end
 
-	lootCache = self:CacheLootIDs()
+	self.lootCache = self:CacheLootIDs()
 
 	local lootThreshold = self:GetLootThreshold()
 	local numLootItems = GetNumLootItems()
@@ -334,7 +351,7 @@ function Addon:OnLootSlotCleared(event, slotIndex)
 		return
 	end
 
-	local cachedLootID = lootCache[slotIndex]
+	local cachedLootID = self.lootCache[slotIndex]
 	if not cachedLootID then
 		return
 	end
