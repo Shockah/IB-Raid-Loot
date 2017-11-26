@@ -207,6 +207,25 @@ function Addon:ShowMinimapDropdown(frame)
 				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
+
+		{
+			text = "Other",
+			isTitle = true,
+			notCheckable = true,
+		},
+		{
+			text = "Clear loot history",
+			tooltipTitle = "",
+			tooltipText = "Clear loot history (in case of the addon malfunctioning).",
+			tooltipOnButton = true,
+			notCheckable = true,
+			func = function()
+				S:Clear(Addon.lootHistory.loot)
+				if Addon.PendingFrame.frame then
+					Addon.PendingFrame.frame:Update()
+				end
+			end,
+		},
 	}, frame)
 end
 
