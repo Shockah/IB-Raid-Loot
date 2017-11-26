@@ -26,6 +26,7 @@ Roll.lua
 LootMessage.lua
 RollMessage.lua
 RollValuesMessage.lua
+LootAssignedMessage.lua
 
 PendingFrame.lua
 PendingLootFrame.lua

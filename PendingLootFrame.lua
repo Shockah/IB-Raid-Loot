@@ -383,7 +383,7 @@ function prototype:UpdateButtonAppearance()
 		return
 	end
 
-	if self.loot.quantity == 1 then
+	if self.loot.quantity <= 1 then
 		self.quantityLabel:Hide()
 	else
 		if #self.loot.assigned > 0 and (not self.loot:IsFullyAssigned()) then

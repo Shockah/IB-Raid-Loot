@@ -111,7 +111,6 @@ function Addon:ShowMinimapDropdown(frame)
 		{
 			text = timeoutValueToText(self.DB.Settings.Master.RollTimeout),
 			tooltipText = "Time after which rolls timeout automatically if not responded to.",
-			keepShownOnClick = true,
 			func = function(self)
 				local timeoutValues = {30, 60, 90, 120, 180, 300}
 
@@ -128,52 +127,52 @@ function Addon:ShowMinimapDropdown(frame)
 				end
 				value = timeoutValues[key]
 				Addon.DB.Settings.Master.RollTimeout = value
-				Addon:ShowDropdown(frame)
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 		{
 			text = "Hide rolls until finished",
 			tooltipText = "Rolls (other than pending) are hidden until everyone rolls or until the timeout.",
 			checked = self.DB.Settings.Master.HideRollsUntilFinished,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.HideRollsUntilFinished = not self.DB.Settings.Master.HideRollsUntilFinished
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 		{
 			text = "Auto-proceed",
 			tooltipText = "Automatically assign loot after rolling is finished.",
 			checked = self.DB.Settings.Master.AutoProceed.Enabled,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.Enabled = not self.DB.Settings.Master.AutoProceed.Enabled
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 		{
 			text = "   Only if everyone responded",
 			tooltipText = "Only automatically assign loot if actually everyone rolled.",
 			checked = self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded = not self.DB.Settings.Master.AutoProceed.OnlyIfEveryoneResponded
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 		{
 			text = "Announce assignees",
 			tooltipText = "Announce assignees in Raid or Raid Warning chat.",
 			checked = self.DB.Settings.Master.AnnounceWinners.Enabled,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.Enabled = not self.DB.Settings.Master.AnnounceWinners.Enabled
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 		{
 			text = "   In Raid Warning",
 			tooltipText = "Use the Raid Warning for announcements.",
 			checked = self.DB.Settings.Master.AnnounceWinners.AsRaidWarning,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Master.AnnounceWinners.AsRaidWarning = not self.DB.Settings.Master.AnnounceWinners.AsRaidWarning
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 
@@ -185,9 +184,9 @@ function Addon:ShowMinimapDropdown(frame)
 			text = "Auto-pass unusable",
 			tooltipText = "Automatically pass equippable loot you can't use.",
 			checked = self.DB.Settings.Raider.AutoPassUnusable,
-			keepShownOnClick = true,
 			func = function()
 				self.DB.Settings.Raider.AutoPassUnusable = not self.DB.Settings.Raider.AutoPassUnusable
+				Addon:ShowMinimapDropdown(frame)
 			end,
 		},
 	}, frame)
@@ -198,6 +197,7 @@ function Addon:ShowDropdown(menus, frame, seconds)
 		self.dropdown = CreateFrame("Frame", selfAddonName.."Dropdown", UIParent, "UIDropDownMenuTemplate")
 	end
 
+	self.dropdown:Hide()
 	EasyMenu(menus, self.dropdown, frame, 0, 0, "MENU", seconds or 2)
 end
 
@@ -359,7 +359,7 @@ function Addon:CacheLootIDs()
 
 	local numLootItems = GetNumLootItems()
 	for i = 1, numLootItems do
-		table.insert(cache, self:LootIDForLootFrameSlot(i))
+		cache[i] = self:LootIDForLootFrameSlot(i)
 	end
 
 	return cache
