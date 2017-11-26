@@ -201,7 +201,10 @@ function prototype:GetAvailableRollTypes(universal)
 		tooltip:SetHyperlink(self.link)
 	end, function(left, right)
 		local isUncreatedSetPiece = S:FilterContains(left, function(line)
-			return S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
+			return
+				S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
+				or
+				(S:StringStartsWith(line.text, "Use: Create a soulbound Tier ") and S:StringEndsWith(line.text, " item appropriate for your class."))
 		end)
 		local isWrongClass = S:FilterContains(left, function(line)
 			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
@@ -232,8 +235,11 @@ function prototype:GetAvailableRollTypes(universal)
 	local isWeapon = not S:IsBlankString(weaponType)
 	local isArmor = not S:IsBlankString(armorType)
 	local isMiscArmor = isArmor and armorType == "Miscellaneous"
+	local isGem = itemInfo[6] == "Gem"
+	local isRelic = isGem and itemInfo[7] == "Artifact Relic"
+	local isNonRelicGem = isGem and (not isRelic)
 	
-	local isEquippable = isWeapon or isArmor
+	local isEquippable = isWeapon or isArmor or isGem
 	local isWrongArmorType = isArmor and armorType and (not isMiscArmor) and equipLocation ~= "INVTYPE_CLOAK" and armorType ~= classToArmorType[select(2, UnitClass("player"))]
 
 	if universal then
@@ -270,18 +276,23 @@ function prototype:GetAvailableRollTypes(universal)
 
 		if isMiscArmor then
 			S:RemoveValue(rollTypes, "Transmog")
-		end 
+		end
 
 		local isEnchanter = false
-		local prof1, prof2 = GetProfessions()
-		local profs = { prof1, prof2 }
-		for _, prof in pairs(profs) do
-			if select(7, GetProfessionInfo(prof)) == ENCHANTING_ID then
-				isEnchanter = true
+		if universal then
+			isEnchanter = true
+		else
+			isEnchanter = false
+			local prof1, prof2 = GetProfessions()
+			local profs = { prof1, prof2 }
+			for _, prof in pairs(profs) do
+				if select(7, GetProfessionInfo(prof)) == ENCHANTING_ID then
+					isEnchanter = true
+				end
 			end
 		end
 
-		if isEnchanter and not isWrongClass then
+		if isEnchanter and not isWrongClass and not isNonRelicGem then
 			table.insert(rollTypes, "Disenchant")
 			if not universal then
 				self.cacheDisenchant = true

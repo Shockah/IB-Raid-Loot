@@ -375,6 +375,7 @@ function Addon:OnLootSlotCleared(event, slotIndex)
 	end
 
 	local cachedLootID = self.lootCache[slotIndex]
+	self.lootCache[slotIndex] = nil
 	if not cachedLootID then
 		return
 	end
