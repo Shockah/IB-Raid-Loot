@@ -128,7 +128,7 @@ function prototype:AddToTooltip(loot, rolls, equippable)
 		GameTooltip:AddLine(description, 0.8, 0.8, 0.8, true)
 	end
 
-	local onlyLocal = loot and loot.hideRollsUntilFinished and self.type ~= "Pending" and loot:HasPendingRolls()
+	local onlyLocal = (not Addon:IsMasterLooter()) and loot and loot.hideRollsUntilFinished and self.type ~= "Pending" and loot:HasPendingRolls()
 	GameTooltip:AddLine("")
 	AddLinesToTooltip(self, sortedRolls, onlyLocal)
 end
