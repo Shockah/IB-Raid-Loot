@@ -324,7 +324,9 @@ function Addon:OnLootReady()
 					if not loot then
 						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
 						loot:SetInitialRolls(self.Loot:GetEligiblePlayers(i))
-						loot:AddToHistory(self.lootHistory)
+						if self.Settings.Debug.DebugMode or S:Count(loot.rolls) > 1 then
+							loot:AddToHistory(self.lootHistory)
+						end
 					end
 
 					if loot.isNew then
