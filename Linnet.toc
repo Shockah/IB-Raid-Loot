@@ -10,7 +10,7 @@
 embeds.xml
 
 # Custom libs
-ShockahUtils.lua
+Libs/ShockahUtils.lua
 
 # Addon code
 Linnet.lua
