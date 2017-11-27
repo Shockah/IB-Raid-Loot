@@ -22,10 +22,10 @@ Loot.lua
 LootHistory.lua
 Roll.lua
 
-LootMessage.lua
-RollMessage.lua
-RollValuesMessage.lua
-LootAssignedMessage.lua
+Messages/LootMessage.lua
+Messages/RollMessage.lua
+Messages/RollValuesMessage.lua
+Messages/LootAssignedMessage.lua
 
 PendingFrame.lua
 PendingLootFrame.lua
