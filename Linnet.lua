@@ -324,7 +324,9 @@ function Addon:OnLootReady()
 					if not loot then
 						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
 						loot:SetInitialRolls(self.Loot:GetEligiblePlayers(i))
-						loot:AddToHistory(self.lootHistory)
+						if self.Settings.Debug.DebugMode or S:Count(loot.rolls) > 1 then
+							loot:AddToHistory(self.lootHistory)
+						end
 					end
 
 					if loot.isNew then
@@ -342,8 +344,17 @@ function Addon:OnLootReady()
 			loot.isNew = false
 		end
 
+		local lootToDisplay = {}
+		S:InsertAllUnique(lootToDisplay, newLoot)
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return loot:IsPendingLocalRoll()
+		end))
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return not loot:IsFullyAssigned()
+		end))
+
 		local pendingFrame = self.PendingFrame:Get()
-		pendingFrame:SetLoot(newLoot)
+		pendingFrame:SetLoot(lootToDisplay)
 		pendingFrame:Update()
 		pendingFrame:Show()
 	end

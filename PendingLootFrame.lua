@@ -34,7 +34,7 @@ function Class:New(parentFrame)
 	frame.icon = CreateFrame("Button", nil, frame, "ItemButtonTemplate")
 	frame.icon:SetPoint("LEFT", 2, 0)
 	frame.icon:SetScript("OnEnter", function(self)
-		if not frame.loot.link then
+		if not frame.loot then
 			return
 		end
 
@@ -43,6 +43,17 @@ function Class:New(parentFrame)
 	end)
 	frame.icon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
+	end)
+	frame.icon:SetScript("OnClick", function(self)
+		if not frame.loot then
+			return
+		end
+
+		if IsControlKeyDown() then
+			DressUpItemLink(frame.loot.link)
+		elseif IsShiftKeyDown() then
+			S:InsertInChatEditbox(frame.loot.link)
+		end
 	end)
 
 	frame.quantityLabel = frame.icon:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -100,6 +111,45 @@ function Class:New(parentFrame)
 	frame.assignButton:SetText(">")
 	frame.assignButton:SetSize(32, 20)
 	frame.assignButton:SetPoint("TOPRIGHT", frame.container, "TOPRIGHT", 0, 0)
+	frame.assignButton:SetScript("OnEnter", function(button)
+		local sortedRolls = S:Filter(frame.loot.rolls, function(roll)
+			return (not S:FilterContains(frame.loot.assigning, function(assignment)
+				return assignment.roll == roll
+			end)) and (not S:FilterContains(frame.loot.assigned, function(assignment)
+				return assignment.roll == roll
+			end))
+		end)
+
+		local alreadyAssignedRolls = S:Map(S:Filter(frame.loot.assigned, function(assignment)
+			return assignment.roll
+		end), function(assignment)
+			return assignment.roll
+		end)
+
+		if S:IsEmpty(sortedRolls) and S:IsEmpty(alreadyAssignedRolls) then
+			return
+		end
+		Addon.Roll:Sort(sortedRolls)
+
+		S:InsertAll(sortedRolls, alreadyAssignedRolls)
+
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:ClearLines()
+		GameTooltip:AddLine("Assign item to...")
+
+		local rollObj = sortedRolls[1]
+		local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
+		local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
+		local valuesStr = S:Join(", ", rollObj.values)
+		valuesStr = S:IsBlankString(valuesStr) and "" or ": "..valuesStr
+		local playerStr = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r".." ("..rollObj.type..valuesStr..")"
+
+		GameTooltip:AddLine("Shift-click to assign to "..playerStr..".", 0.8, 0.8, 0.8)
+		GameTooltip:Show()
+	end)
+	frame.assignButton:SetScript("OnLeave", function(button)
+		GameTooltip:Hide()
+	end)
 	frame.assignButton:SetScript("OnClick", function(self)
 		local sortedRolls = S:Filter(frame.loot.rolls, function(roll)
 			return (not S:FilterContains(frame.loot.assigning, function(assignment)
@@ -115,7 +165,7 @@ function Class:New(parentFrame)
 			return assignment.roll
 		end)
 
-		if S:IsEmpty(sortedRolls) then
+		if S:IsEmpty(sortedRolls) and S:IsEmpty(alreadyAssignedRolls) then
 			return
 		end
 		Addon.Roll:Sort(sortedRolls)

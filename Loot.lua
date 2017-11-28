@@ -274,7 +274,7 @@ function prototype:GetAvailableRollTypes(universal)
 			end
 		end
 
-		if isMiscArmor then
+		if isMiscArmor or isGem then
 			S:RemoveValue(rollTypes, "Transmog")
 		end
 
@@ -294,6 +294,9 @@ function prototype:GetAvailableRollTypes(universal)
 
 		if isEnchanter and not isWrongClass and not isNonRelicGem then
 			table.insert(rollTypes, "Disenchant")
+			if universal then
+				table.insert(rollTypes, "Pass")
+			end
 			if not universal then
 				self.cacheDisenchant = true
 			end
@@ -361,8 +364,7 @@ function prototype:FixDuplicateRolls()
 
 		local fixedRolls = fixRolls(equalRolls)
 		for _, roll in pairs(fixedRolls) do
-			S:RemoveValue(toSync, roll)
-			table.insert(toSync, roll)
+			S:InsertUnique(toSync, roll)
 			continue = true
 		end
 	end
@@ -489,6 +491,20 @@ function prototype:LootAssigned(cancelAll)
 	else
 		table.insert(self.assigned, {})
 		Addon.LootAssignedMessage:New(self, nil):Send()
+	end
+
+	if self:IsFullyAssigned() then
+		local pendingRolls = S:Filter(self.rolls, function(roll)
+			return roll.type == "Pending"
+		end)
+		for _, pendingRoll in pairs(pendingRolls) do
+			Addon:CancelTimer(self.timeoutTimer)
+			self.timeoutTimer = nil
+			pendingRoll.type = "No Response"
+			if Addon:IsMasterLooter() then
+				pendingRoll:SendRoll(self)
+			end
+		end
 	end
 
 	if Addon.PendingFrame.frame then

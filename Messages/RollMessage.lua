@@ -35,6 +35,7 @@ function prototype:Send()
 		if targetRealm then
 			target = target.."-"..targetRealm
 		end
+		target = S:GetPlayerNameWithOptionalRealm(target)
 
 		Addon:SendCompressedCommMessage(selfMessageType, {
 			lootID = self.loot.lootID,
