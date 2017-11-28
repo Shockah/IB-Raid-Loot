@@ -34,7 +34,7 @@ function Class:New(parentFrame)
 	frame.icon = CreateFrame("Button", nil, frame, "ItemButtonTemplate")
 	frame.icon:SetPoint("LEFT", 2, 0)
 	frame.icon:SetScript("OnEnter", function(self)
-		if not frame.loot.link then
+		if not frame.loot then
 			return
 		end
 
@@ -43,6 +43,17 @@ function Class:New(parentFrame)
 	end)
 	frame.icon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
+	end)
+	frame.icon:SetScript("OnClick", function(self)
+		if not frame.loot then
+			return
+		end
+
+		if IsControlKeyDown() then
+			DressUpItemLink(frame.loot.link)
+		elseif IsShiftKeyDown() then
+			S:InsertInChatEditbox(frame.loot.link)
+		end
 	end)
 
 	frame.quantityLabel = frame.icon:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
