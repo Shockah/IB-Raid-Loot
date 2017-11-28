@@ -493,6 +493,20 @@ function prototype:LootAssigned(cancelAll)
 		Addon.LootAssignedMessage:New(self, nil):Send()
 	end
 
+	if self:IsFullyAssigned() then
+		local pendingRolls = S:Filter(self.rolls, function(roll)
+			return roll.type == "Pending"
+		end)
+		for _, pendingRoll in pairs(pendingRolls) do
+			Addon:CancelTimer(self.timeoutTimer)
+			self.timeoutTimer = nil
+			pendingRoll.type = "No Response"
+			if Addon:IsMasterLooter() then
+				pendingRoll:SendRoll(self)
+			end
+		end
+	end
+
 	if Addon.PendingFrame.frame then
 		Addon.PendingFrame.frame:Update()
 	end
