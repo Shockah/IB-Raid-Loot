@@ -294,6 +294,9 @@ function prototype:GetAvailableRollTypes(universal)
 
 		if isEnchanter and not isWrongClass and not isNonRelicGem then
 			table.insert(rollTypes, "Disenchant")
+			if universal then
+				table.insert(rollTypes, "Pass")
+			end
 			if not universal then
 				self.cacheDisenchant = true
 			end
