@@ -274,7 +274,7 @@ function prototype:GetAvailableRollTypes(universal)
 			end
 		end
 
-		if isMiscArmor then
+		if isMiscArmor or isGem then
 			S:RemoveValue(rollTypes, "Transmog")
 		end
 
