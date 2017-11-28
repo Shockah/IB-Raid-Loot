@@ -9,6 +9,19 @@ local Class = Addon.PendingLootFrame
 local instances = {}
 local nextId = 1
 
+local function GetSortedRolls(self)
+	local sortedRolls = S:Filter(self.loot.rolls, function(roll)
+		return (not S:FilterContains(self.loot.assigning, function(assignment)
+			return assignment.roll == roll
+		end)) and (not S:FilterContains(self.loot.assigned, function(assignment)
+			return assignment.roll == roll
+		end))
+	end)
+	
+	Addon.Roll:Sort(sortedRolls)
+	return sortedRolls
+end
+
 function Class:New(parentFrame)
 	local frame = CreateFrame("Frame", parentFrame:GetParent():GetParent():GetName().."ItemFrame"..nextId, parentFrame)
 	frame = S:CloneInto(prototype, frame)
@@ -44,15 +57,19 @@ function Class:New(parentFrame)
 	frame.icon:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
 	end)
-	frame.icon:SetScript("OnClick", function(self)
+	frame.icon:SetScript("OnClick", function(button, clickButton)
 		if not frame.loot then
 			return
 		end
 
-		if IsControlKeyDown() then
-			DressUpItemLink(frame.loot.link)
-		elseif IsShiftKeyDown() then
-			S:InsertInChatEditbox(frame.loot.link)
+		if clickButton == "LeftButton" then
+			if IsControlKeyDown() then
+				DressUpItemLink(self.loot.link)
+			elseif IsShiftKeyDown() then
+				S:InsertInChatEditbox(self.loot.link)
+			end
+		elseif clickButton == "RightButton" then
+			self:HandleAssignAction(button)
 		end
 	end)
 
@@ -111,90 +128,94 @@ function Class:New(parentFrame)
 	frame.assignButton:SetText(">")
 	frame.assignButton:SetSize(32, 20)
 	frame.assignButton:SetPoint("TOPRIGHT", frame.container, "TOPRIGHT", 0, 0)
-	frame.assignButton:SetScript("OnClick", function(self)
-		local sortedRolls = S:Filter(frame.loot.rolls, function(roll)
-			return (not S:FilterContains(frame.loot.assigning, function(assignment)
-				return assignment.roll == roll
-			end)) and (not S:FilterContains(frame.loot.assigned, function(assignment)
-				return assignment.roll == roll
-			end))
-		end)
-
-		local alreadyAssignedRolls = S:Map(S:Filter(frame.loot.assigned, function(assignment)
-			return assignment.roll
-		end), function(assignment)
-			return assignment.roll
-		end)
-
-		if S:IsEmpty(sortedRolls) then
-			return
-		end
-		Addon.Roll:Sort(sortedRolls)
-
-		if IsShiftKeyDown() then
-			sortedRolls[1]:SendRoll(frame.loot)
-		else
-			local groupedRolls = S:Group(sortedRolls, function(roll)
-				return roll.type
-			end)
-
-			local sorted2Rolls = {}
-			for rollType, groupedRollObjs in pairs(groupedRolls) do
-				table.insert(sorted2Rolls, {
-					type = rollType,
-					rolls = groupedRollObjs,
-				})
-			end
-			table.sort(sorted2Rolls, function(a, b)
-				return Addon.rollTypes[a.type].index < Addon.rollTypes[b.type].index
-			end)
-
-			if not S:IsEmpty(alreadyAssignedRolls) then
-				table.insert(sorted2Rolls, {
-					type = "Already assigned",
-					rolls = alreadyAssignedRolls,
-				})
-			end
-
-			local menus = {}
-			local submenus = {}
-			for _, group in pairs(sorted2Rolls) do
-				local menusToUse = S:IsEmpty(menus) and menus or submenus
-				local rollType = Addon.rollTypes[rollType]
-				table.insert(menusToUse, {
-					text = group.type,
-					isTitle = true,
-					icon = rollType and rollType.icon or nil,
-				})
-				for _, rollObj in pairs(group.rolls) do
-					local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
-					local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
-					local valuesStr = S:Join(", ", rollObj.values)
-					valuesStr = S:IsBlankString(valuesStr) and "" or ": "..valuesStr
-
-					table.insert(menusToUse, {
-						text = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r"..valuesStr,
-						func = function()
-							frame.loot:AssignLoot(rollObj)
-						end,
-					})
-				end
-			end
-
-			if not S:IsEmpty(submenus) then
-				table.insert(menus, {
-					text = "Other",
-					hasArrow = true,
-					menuList = submenus,
-				})
-			end
-			Addon:ShowDropdown(menus, self)
-		end
+	frame.assignButton:SetScript("OnClick", function(button)
+		self:HandleAssignAction(button)
 	end)
 	frame.assignButton:Hide()
 
 	table.insert(instances, frame)
 	return frame
+end
+
+function prototype:HandleAssignAction(attachment)
+	if IsShiftKeyDown() then
+		local sortedRolls = GetSortedRolls(self)
+		if S:IsEmpty(sortedRolls) then
+			return
+		end
+		sortedRolls[1]:SendRoll(self.loot)
+	else
+		self:ShowAssignDropdown(attachment)
+	end
+end
+
+function prototype:ShowAssignDropdown(attachment)
+	local sortedRolls = GetSortedRolls(self)
+	if S:IsEmpty(sortedRolls) then
+		return
+	end
+
+	local groupedRolls = S:Group(sortedRolls, function(roll)
+		return roll.type
+	end)
+
+	local sorted2Rolls = {}
+	for rollType, groupedRollObjs in pairs(groupedRolls) do
+		table.insert(sorted2Rolls, {
+			type = rollType,
+			rolls = groupedRollObjs,
+		})
+	end
+	table.sort(sorted2Rolls, function(a, b)
+		return Addon.rollTypes[a.type].index < Addon.rollTypes[b.type].index
+	end)
+
+	local alreadyAssignedRolls = S:Map(S:Filter(self.loot.assigned, function(assignment)
+		return assignment.roll
+	end), function(assignment)
+		return assignment.roll
+	end)
+
+	if not S:IsEmpty(alreadyAssignedRolls) then
+		table.insert(sorted2Rolls, {
+			type = "Already assigned",
+			rolls = alreadyAssignedRolls,
+		})
+	end
+
+	local menus = {}
+	local submenus = {}
+	for _, group in pairs(sorted2Rolls) do
+		local menusToUse = S:IsEmpty(menus) and menus or submenus
+		local rollType = Addon.rollTypes[rollType]
+		table.insert(menusToUse, {
+			text = group.type,
+			isTitle = true,
+			icon = rollType and rollType.icon or nil,
+		})
+		for _, rollObj in pairs(group.rolls) do
+			local class = select(2, UnitClass(S:GetPlayerNameWithOptionalRealm(rollObj.player)))
+			local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
+			local valuesStr = S:Join(", ", rollObj.values)
+			valuesStr = S:IsBlankString(valuesStr) and "" or ": "..valuesStr
+
+			table.insert(menusToUse, {
+				text = colorPart..S:GetPlayerNameWithOptionalRealm(rollObj.player).."|r"..valuesStr,
+				func = function()
+					frame.loot:AssignLoot(rollObj)
+				end,
+			})
+		end
+	end
+
+	if not S:IsEmpty(submenus) then
+		table.insert(menus, {
+			text = "Other",
+			hasArrow = true,
+			menuList = submenus,
+		})
+	end
+	Addon:ShowDropdown(menus, attachment)
 end
 
 local function SetupFrame(frame)
