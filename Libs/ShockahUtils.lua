@@ -202,6 +202,21 @@ function Self:Join(delimiter, tbl)
 	return result
 end
 
+function Self:InsertUnique(tbl, value)
+	for _, v in pairs(tbl) do
+		if v == value then
+			return
+		end
+	end
+	table.insert(tbl, value)
+end
+
+function Self:InsertAllUnique(tbl, values)
+	for _, value in pairs(values) do
+		self:InsertUnique(tbl, value)
+	end
+end
+
 ------------------------------
 -- items
 ------------------------------

@@ -364,8 +364,7 @@ function prototype:FixDuplicateRolls()
 
 		local fixedRolls = fixRolls(equalRolls)
 		for _, roll in pairs(fixedRolls) do
-			S:RemoveValue(toSync, roll)
-			table.insert(toSync, roll)
+			S:InsertUnique(toSync, roll)
 			continue = true
 		end
 	end

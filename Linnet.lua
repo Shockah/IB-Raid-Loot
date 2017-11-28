@@ -344,8 +344,17 @@ function Addon:OnLootReady()
 			loot.isNew = false
 		end
 
+		local lootToDisplay = {}
+		S:InsertAllUnique(lootToDisplay, newLoot)
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return loot:IsPendingLocalRoll()
+		end))
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return not loot:IsFullyAssigned()
+		end))
+
 		local pendingFrame = self.PendingFrame:Get()
-		pendingFrame:SetLoot(newLoot)
+		pendingFrame:SetLoot(lootToDisplay)
 		pendingFrame:Update()
 		pendingFrame:Show()
 	end
