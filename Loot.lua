@@ -82,7 +82,7 @@ function Class:New(lootID, link, quantity, isNew)
 	return obj
 end
 
-function Class:GetEligiblePlayers(slotIndex)
+function Class:GetEligiblePlayers(slotIndex, withMissingAddon)
 	local result = {}
 
 	if Addon.Settings.Debug.DebugMode then
@@ -116,10 +116,12 @@ function Class:GetEligiblePlayers(slotIndex)
 		end
 	end
 
-	result = S:Filter(result, function(player)
-		-- TODO: potentially skip mismatching versions
-		return Addon.addonVersions[player]
-	end)
+	if not withMissingAddon then
+		result = S:Filter(result, function(player)
+			-- TODO: potentially skip mismatching versions
+			return Addon.addonVersions[player]
+		end)
+	end
 
 	return result
 end

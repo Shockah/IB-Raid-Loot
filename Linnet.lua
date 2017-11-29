@@ -171,6 +171,29 @@ function Addon:OnLootReady()
 		pendingFrame:SetLoot(lootToDisplay)
 		pendingFrame:Update()
 		pendingFrame:Show()
+
+		if IsInRaid() then
+			local missingAddon = {}
+			local num = GetNumGroupMembers()
+			for i = 1, num do
+				local name = GetRaidRosterInfo(i)
+				if name then
+					name = S:GetPlayerNameWithRealm(name)
+					-- TODO: possibly handle mismatched versions
+					if not self.addonVersions[name] then
+						name = S:GetPlayerNameWithOptionalRealm(name)
+						local class = select(2, UnitClass(name))
+						local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
+						local playerStr = colorPart..name.."|r"
+						table.insert(missingAddon, name)
+					end
+				end
+			end
+
+			if not S:IsEmpty(missingAddon) then
+				print("|c7fff9f"..selfAddonName.."|r: |cff3f3fMissing addon:|r "..S:Join(", ", missingAddon))
+			end
+		end
 	end
 
 	for _, loot in pairs(self.lootHistory.loot) do
