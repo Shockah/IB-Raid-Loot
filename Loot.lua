@@ -116,6 +116,11 @@ function Class:GetEligiblePlayers(slotIndex)
 		end
 	end
 
+	result = S:Filter(result, function(player)
+		-- TODO: potentially skip mismatching versions
+		return Addon.addonVersions[player]
+	end)
+
 	return result
 end
 

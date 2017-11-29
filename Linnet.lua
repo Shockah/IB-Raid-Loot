@@ -23,6 +23,7 @@ local isLootWindowOpen = false
 Addon.addonVersions = {}
 Addon.lootCache = {}
 Addon.dropdown = nil
+Addon.wasInRaid = false
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 	type = "launcher",
@@ -50,9 +51,11 @@ function Addon:OnInitialize()
 	self.lootHistory = self.LootHistory:New()
 
 	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", "OnItemInfoReceived")
+	
 	self:RegisterEvent("LOOT_READY", "OnLootReady")
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 	self:RegisterEvent("LOOT_SLOT_CLEARED", "OnLootSlotCleared")
+
 	self:RegisterEvent("RAID_ROSTER_UPDATE", "OnRaidRosterUpdate")
 	self:RegisterEvent("PARTY_CONVERTED_TO_RAID", "OnPartyConvertedToRaid")
 
@@ -97,6 +100,11 @@ function Addon:OnInitialize()
 	self.DB = _G[selfAddonName.."DB"]
 
 	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
+
+	if not self.wasInRaid and IsInRaid() then
+		self.AddonConfirmMessage:New():Send()
+		self.wasInRaid = true
+	end
 end
 
 function Addon:OnDisable()
@@ -212,16 +220,40 @@ end
 
 function Addon:OnRaidRosterUpdate(event)
 	if self:IsMasterLooter() then
-	end
+		local existing = {}
 
-	-- TODO:
+		local num = GetNumGroupMembers()
+		for i = 1, num do
+			local name = GetRaidRosterInfo(i)
+			if name then
+				name = S:GetPlayerNameWithRealm(name)
+				table.insert(existing, S:GetPlayerNameWithRealm(name))
+			end
+		end
+
+		for player, version in pairs(Addon.addonVersions) do
+			if not S:Contains(existing, player) then
+				table.remove(Addon.addonVersions, player)
+			end
+		end
+	else
+		if IsInRaid() then
+			if not self.wasInRaid then
+				self.AddonConfirmMessage:New():Send()
+				self.wasInRaid = true
+			end
+		else
+			self.wasInRaid = false
+		end
+	end
 end
 
 function Addon:OnPartyConvertedToRaid(event)
 	if self:IsMasterLooter() then
+		return
 	end
 
-	-- TODO:
+	self.AddonConfirmMessage:New():Send()
 end
 
 function Addon:ShowMinimapDropdown(frame)

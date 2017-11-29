@@ -13,7 +13,7 @@ Addon[selfMessageType.."Message"] = {}
 local Class = Addon[selfMessageType.."Message"]
 Addon.Comm.handlers[selfMessageType] = Class
 
-function Class:New(loot, type)
+function Class:New()
 	local obj = S:Clone(prototype)
 	return obj
 end
@@ -32,7 +32,8 @@ function prototype:Send()
 		target = S:GetPlayerNameWithOptionalRealm(target)
 
 		Addon:SendCompressedCommMessage(selfMessageType, {
-			version = Addon.NumericVersion,
+			numericVersion = Addon.NumericVersion,
+			version = Addon.Version,
 		}, "WHISPER", target)
 	end
 end
@@ -48,6 +49,7 @@ function Class:Handle(message, distribution, sender)
 	end
 
 	sender = S:GetPlayerNameWithRealm(sender)
-	local version = message.version
-	-- TODO: do something about the version
+	Addon.addonVersions[sender] = message
+
+	-- TODO: potentially send a version mismatch message
 end
