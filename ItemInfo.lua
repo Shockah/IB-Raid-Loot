@@ -43,6 +43,15 @@ function Class:New(originalRequest, tbl)
 	return obj
 end
 
+function Class:Get(item)
+	local itemInfoTable = { GetItemInfo(item) }
+	if itemInfoTable[1] == nil then
+		return nil
+	else
+		return self:New(item, itemInfoTable)
+	end 
+end
+
 function prototype:Binds()
 	return self.bindType ~= 0
 end

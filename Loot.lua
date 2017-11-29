@@ -192,7 +192,7 @@ function prototype:GetAvailableRollTypes(universal)
 	S:RemoveValue(rollTypes, "Disenchant")
 	S:RemoveValue(rollTypes, "Pass")
 
-	local itemInfo = Addon.ItemInfoRequest:GetInstant(self.link)
+	local itemInfo = Addon.ItemInfo:Get(self.link)
 
 	local isUncreatedSetPiece, isWrongClass, isWrongWeaponType = S:ParseTooltip(function(tooltip)
 		tooltip:SetHyperlink(self.link)

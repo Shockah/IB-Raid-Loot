@@ -30,7 +30,7 @@ function Class:Get(items, callback)
 
 	for _, item in pairs(items) do
 		local itemInfoTable = { GetItemInfo(item) }
-		local itemInfo = self:GetInstant(item)
+		local itemInfo = Addon.ItemInfo:Get(item)
 		if itemInfo then
 			infos[item] = itemInfo
 		else
@@ -44,15 +44,6 @@ function Class:Get(items, callback)
 	elseif needsRequest then
 		table.insert(activeRequests, Class:New(items, callback))
 	end
-end
-
-function Class:GetInstant(item)
-	local itemInfoTable = { GetItemInfo(item) }
-	if itemInfoTable[1] == nil then
-		return nil
-	else
-		return Addon.ItemInfo:New(item, itemInfoTable)
-	end 
 end
 
 function Class:HandleItemInfoResponse(itemID)
@@ -81,7 +72,7 @@ end
 function prototype:GetItemInfos()
 	local infos = {}
 	for _, item in pairs(self.items) do
-		infos[item] = Class:GetInstant(item)
+		infos[item] = Addon.ItemInfo:Get(item)
 	end
 	return infos
 end
