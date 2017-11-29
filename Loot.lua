@@ -192,10 +192,7 @@ function prototype:GetAvailableRollTypes(universal)
 	S:RemoveValue(rollTypes, "Disenchant")
 	S:RemoveValue(rollTypes, "Pass")
 
-	local itemInfo = { GetItemInfo(self.link) }
-	--itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
-	--itemEquipLoc, iconFileDataID, itemSellPrice, itemClassID, itemSubClassID, bindType, expacID, itemSetID, 
-	--isCraftingReagent = GetItemInfo(itemID or "itemString" or "itemName" or "itemLink")
+	local itemInfo = Addon.ItemInfoRequest:GetInstant(self.link)
 
 	local isUncreatedSetPiece, isWrongClass, isWrongWeaponType = S:ParseTooltip(function(tooltip)
 		tooltip:SetHyperlink(self.link)
@@ -227,16 +224,16 @@ function prototype:GetAvailableRollTypes(universal)
 		return isUncreatedSetPiece, isWrongClass, isWrongWeaponType
 	end)
 
-	local weaponType = itemInfo[6] == "Weapon" and itemInfo[7] or nil
-	local armorType = itemInfo[6] == "Armor" and itemInfo[7] or nil
-	local equipLocation = itemInfo[9]
-	local bindType = itemInfo[14]
+	local weaponType = itemInfo.type.name == "Weapon" and itemInfo.subtype.name or nil
+	local armorType = itemInfo.type.name == "Armor" and itemInfo.subtype.name or nil
+	local equipLocation = itemInfo.equipLocation.internalName
+	local bindType = itemInfo.bindType
 
 	local isWeapon = not S:IsBlankString(weaponType)
 	local isArmor = not S:IsBlankString(armorType)
 	local isMiscArmor = isArmor and armorType == "Miscellaneous"
-	local isGem = itemInfo[6] == "Gem"
-	local isRelic = isGem and itemInfo[7] == "Artifact Relic"
+	local isGem = itemInfo.type.name == "Gem"
+	local isRelic = isGem and itemInfo.subtype.name == "Artifact Relic"
 	local isNonRelicGem = isGem and (not isRelic)
 	
 	local isEquippable = isWeapon or isArmor or isGem

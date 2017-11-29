@@ -17,6 +17,7 @@ Linnet.lua
 Comm.lua
 RollTypes.lua
 
+ItemInfo.lua
 ItemInfoRequest.lua
 Loot.lua
 LootHistory.lua

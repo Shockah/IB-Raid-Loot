@@ -316,19 +316,12 @@ function prototype:SetLoot(loot)
 	self.loot = loot
 
 	Addon.ItemInfoRequest:Get({ loot.link }, function(itemInfos)
-		--itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
-		--itemEquipLoc, iconFileDataID, itemSellPrice, itemClassID, itemSubClassID, bindType, expacID, itemSetID, 
-		--isCraftingReagent = GetItemInfo(itemID or "itemString" or "itemName" or "itemLink")
-
 		local itemInfo = itemInfos[loot.link]
-		local itemName = itemInfo[1]
-		local itemRarity = itemInfo[3]
-		local itemTexture = itemInfo[10]
+		
+		self.icon.icon:SetTexture(itemInfo.texture)
 
-		self.icon.icon:SetTexture(itemTexture)
-
-		local r, g, b = GetItemQualityColor(itemRarity)
-		self.nameLabel:SetText(itemName)
+		local r, g, b = GetItemQualityColor(itemInfo.rarity)
+		self.nameLabel:SetText(itemInfo.name)
 		self.nameLabel:SetTextColor(r, g, b, 1)
 
 		local availableRollTypes = loot:GetAvailableRollTypes(not loot:IsPendingLocalRoll())
