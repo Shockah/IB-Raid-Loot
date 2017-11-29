@@ -31,40 +31,6 @@ local prototype = {}
 Addon.Loot = {}
 local Class = Addon.Loot
 
-local classToArmorType = {
-	MAGE = "Cloth",
-	PRIEST = "Cloth",
-	WARLOCK = "Cloth",
-
-	DEMONHUNTER = "Leather",
-	DRUID = "Leather",
-	MONK = "Leather",
-	ROGUE = "Leather",
-
-	HUNTER = "Mail",
-	SHAMAN = "Mail",
-
-	DEATHKNIGHT = "Plate",
-	PALADIN = "Plate",
-	WARRIOR = "Plate",
-}
-local weaponTypes = {
-	"Bow",
-	"Crossbow",
-	"Dagger",
-	"Gun",
-	"Fishing Pole",
-	"Fist Weapon",
-	"Polearm",
-	"Staff",
-	"Thrown",
-	"Wand",
-	"Warglaive",
-	"Axe",
-	"Mace",
-	"Sword",
-}
-
 function Class:New(lootID, link, quantity, isNew)
 	local obj = S:Clone(prototype)
 	obj.lootID = lootID
@@ -182,6 +148,13 @@ function prototype:HasPendingRolls()
 	end)
 end
 
+function prototype:GetItemInfo()
+	if not self.itemInfo then
+		self.itemInfo = Addon.ItemInfo:Get(self.link)
+	end
+	return self.itemInfo
+end
+
 function prototype:GetAvailableRollTypes(universal)
 	local ENCHANTING_ID = 333
 	local rollTypes = S:Map(S:Filter(Addon.orderedRollTypes, function(rollType)
@@ -192,78 +165,40 @@ function prototype:GetAvailableRollTypes(universal)
 	S:RemoveValue(rollTypes, "Disenchant")
 	S:RemoveValue(rollTypes, "Pass")
 
-	local itemInfo = Addon.ItemInfo:Get(self.link)
+	local itemInfo = self:GetItemInfo()
 
-	local isUncreatedSetPiece, isWrongClass, isWrongWeaponType = S:ParseTooltip(function(tooltip)
-		tooltip:SetHyperlink(self.link)
-	end, function(left, right)
-		local isUncreatedSetPiece = S:FilterContains(left, function(line)
-			return
-				S:StringStartsWith(line.text, "Use: Create a class set item appropriate for your loot specialization")
-				or
-				(S:StringStartsWith(line.text, "Use: Create a soulbound Tier ") and S:StringEndsWith(line.text, " item appropriate for your class."))
-		end)
-		local isWrongClass = S:FilterContains(left, function(line)
-			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
-				return S:StringStartsWith(line.text, "Class: ") or S:StringStartsWith(line.text, "Classes: ")
-			else
-				return false
-			end
-		end)
-		local isWrongWeaponType = S:FilterContains(left, function(line)
-			if S:Round(line.r * 255) == 255 and S:Round(line.g * 255) == 32 and S:Round(line.b * 255) == 32 then
-				for _, weaponType in pairs(weaponTypes) do
-					if weaponType == line.text then
-						return true
-					end
-				end
-			else
-				return false
-			end
-		end)
-		return isUncreatedSetPiece, isWrongClass, isWrongWeaponType
-	end)
-
-	local weaponType = itemInfo.type.name == "Weapon" and itemInfo.subtype.name or nil
-	local armorType = itemInfo.type.name == "Armor" and itemInfo.subtype.name or nil
-	local equipLocation = itemInfo.equipLocation.internalName
-	local bindType = itemInfo.bindType
-
-	local isWeapon = not S:IsBlankString(weaponType)
-	local isArmor = not S:IsBlankString(armorType)
-	local isMiscArmor = isArmor and armorType == "Miscellaneous"
+	local isWeapon = itemInfo.type.name == "Weapon"
+	local isArmor = itemInfo.type.name == "Armor"
+	local isMiscArmor = isArmor and itemInfo.subtype.name == "Miscellaneous"
 	local isGem = itemInfo.type.name == "Gem"
 	local isRelic = isGem and itemInfo.subtype.name == "Artifact Relic"
 	local isNonRelicGem = isGem and (not isRelic)
 	
 	local isEquippable = isWeapon or isArmor or isGem
-	local isWrongArmorType = isArmor and armorType and (not isMiscArmor) and equipLocation ~= "INVTYPE_CLOAK" and armorType ~= classToArmorType[select(2, UnitClass("player"))]
 
-	if universal then
-		isWrongClass = false
-		isWrongWeaponType = false
-		isWrongArmorType = false
-	end
+	local isWrongClass = (not universal) and itemInfo:IsWrongClass()
+	local isWrongWeaponType = (not universal) and itemInfo:IsWrongWeaponType()
+	local isWrongArmorType = (not universal) and itemInfo:IsWrongArmorType()
 
 	if not universal then
-		self.cacheIsEquippable = isEquippable or isUncreatedSetPiece
+		self.cacheIsEquippable = isEquippable or itemInfo:IsUncreatedSetPiece()
 	end
 
-	if isEquippable or isUncreatedSetPiece then
-		if (not isUncreatedSetPiece) or isWeapon then
+	if isEquippable or itemInfo:IsUncreatedSetPiece() then
+		if (not itemInfo:IsUncreatedSetPiece()) or isWeapon then
 			S:RemoveValue(rollTypes, "2-set")
 			S:RemoveValue(rollTypes, "4-set")
 			S:RemoveValue(rollTypes, "Warforged")
 		end
 
-		if isWrongClass or isWrongArmorType or isWrongWeaponType then
+		if (isWrongClass or isWrongArmorType or isWrongWeaponType) then
 			S:RemoveValue(rollTypes, "2-set")
 			S:RemoveValue(rollTypes, "4-set")
 			S:RemoveValue(rollTypes, "Major")
 			S:RemoveValue(rollTypes, "Minor")
 			S:RemoveValue(rollTypes, "Warforged")
 
-			if bindType ~= 0 and bindType ~= 2 then -- 0 = no bind; 2 = BoE
+			if (not itemInfo:Binds()) or itemInfo:BindsOnEquip() then
 				S:RemoveValue(rollTypes, "Transmog")
 				if not universal then
 					self.cacheIsUnusable = true
