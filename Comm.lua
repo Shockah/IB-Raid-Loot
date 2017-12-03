@@ -11,7 +11,7 @@ Addon.Comm = {
 }
 local Class = Addon.Comm
 
-function Comm:SendCompressedCommMessage(type, obj, distribution, target)
+function Class:SendCompressedCommMessage(type, obj, distribution, target)
 	local message = {}
 	message.Type = type
 	message.Body = obj
