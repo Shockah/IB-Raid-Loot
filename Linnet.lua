@@ -90,6 +90,9 @@ function Addon:OnInitialize()
 	end
 	self.DB = _G[selfAddonName.."DB"]
 
+	if not self.DB.minimap then
+		self.DB.minimap = {}
+	end
 	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
 end
 
