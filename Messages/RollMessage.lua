@@ -12,8 +12,10 @@ local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
-Addon.RollMessage = {}
-local Class = Addon.RollMessage
+local selfMessageType = "Roll"
+Addon[selfMessageType.."Message"] = {}
+local Class = Addon[selfMessageType.."Message"]
+Addon.Comm.handlers[selfMessageType] = Class
 
 function Class:New(loot, type)
 	local obj = S:Clone(prototype)
@@ -23,6 +25,10 @@ function Class:New(loot, type)
 end
 
 function prototype:Send()
+	if Addon:IsMasterLooter() then
+		return
+	end
+
 	local lootMethod, masterLooterPartyID, masterLooterRaidID = GetLootMethod()
 	if lootMethod == "master" and masterLooterPartyID ~= 0 and masterLooterRaidID then
 		local target, targetRealm = UnitName("raid"..masterLooterRaidID)
@@ -31,7 +37,7 @@ function prototype:Send()
 		end
 		target = S:GetPlayerNameWithOptionalRealm(target)
 
-		Addon:SendCompressedCommMessage("Roll", {
+		Addon:SendCompressedCommMessage(selfMessageType, {
 			lootID = self.loot.lootID,
 			type = self.type,
 		}, "WHISPER", target)

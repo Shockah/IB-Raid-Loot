@@ -223,6 +223,14 @@ function Self:InsertAllUnique(tbl, values)
 	end
 end
 
+function Self:Without(tbl, values)
+	local result = self:Clone(tbl)
+	for _, value in pairs(values) do
+		self:RemoveValue(result, value)
+	end
+	return result
+end
+
 ------------------------------
 -- items
 ------------------------------

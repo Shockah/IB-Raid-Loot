@@ -1,5 +1,5 @@
 --[[
-	RollValuesMessage
+	LootAssignedMessage
 	(master -> raiders)
 
 	Properties:
@@ -12,8 +12,10 @@ local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
-Addon.RollValuesMessage = {}
-local Class = Addon.RollValuesMessage
+local selfMessageType = "LootAssigned"
+Addon[selfMessageType.."Message"] = {}
+local Class = Addon[selfMessageType.."Message"]
+Addon.Comm.handlers[selfMessageType] = Class
 
 function Class:New(loot, roll)
 	local obj = S:Clone(prototype)
@@ -23,11 +25,13 @@ function Class:New(loot, roll)
 end
 
 function prototype:Send()
-	Addon:SendCompressedCommMessage("RollValues", {
+	if not Addon:IsMasterLooter() then
+		return
+	end
+
+	Addon:SendCompressedCommMessage(selfMessageType, {
 		lootID = self.loot.lootID,
-		player = self.roll.player,
-		type = self.roll.type,
-		values = self.roll.values,
+		player = self.roll and self.roll.player or nil,
 	}, "RAID")
 end
 
@@ -41,14 +45,22 @@ function Class:Handle(message, distribution, sender)
 		return
 	end
 
-	local player = S:GetPlayerNameWithRealm(message.player)
-	local roll = loot:GetRollForPlayer(player)
-	if not roll then
-		return
+	local roll = nil
+	local player = message.player
+	if player then
+		player = S:GetPlayerNameWithRealm(player)
+		roll = loot:GetRollForPlayer(player)
 	end
 
-	roll.type = message.type
-	roll.values = message.values
+	if roll then
+		roll.assigned = true
+		table.insert(loot.assigned, {
+			timer = nil,
+			roll = roll,
+		})
+	else
+		table.insert(loot.assigned, {})
+	end
 	
 	if Addon.PendingFrame.frame then
 		Addon.PendingFrame.frame:Update()

@@ -4,6 +4,9 @@ Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceCom
 local Addon = Linnet
 local S = LibStub:GetLibrary("ShockahUtils")
 
+Addon.NumericVersion = 5
+Addon.Version = "r"..Addon.NumericVersion
+
 Addon.Settings = {
 	Debug = {
 		Messages = false,
@@ -17,8 +20,10 @@ Addon.Settings = {
 
 local isLootWindowOpen = false
 
+Addon.addonVersions = {}
 Addon.lootCache = {}
 Addon.dropdown = nil
+Addon.wasInRaid = false
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(selfAddonName, {
 	type = "launcher",
@@ -46,9 +51,13 @@ function Addon:OnInitialize()
 	self.lootHistory = self.LootHistory:New()
 
 	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", "OnItemInfoReceived")
+	
 	self:RegisterEvent("LOOT_READY", "OnLootReady")
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 	self:RegisterEvent("LOOT_SLOT_CLEARED", "OnLootSlotCleared")
+
+	self:RegisterEvent("RAID_ROSTER_UPDATE", "OnRaidRosterUpdate")
+	self:RegisterEvent("PARTY_CONVERTED_TO_RAID", "OnPartyConvertedToRaid")
 
 	self:RegisterComm(self.Settings.AceCommPrefix)
 
@@ -94,6 +103,183 @@ function Addon:OnInitialize()
 		self.DB.minimap = {}
 	end
 	LibStub("LibDBIcon-1.0"):Register(selfAddonName, LDB, self.DB.minimap)
+
+	if not self.wasInRaid and IsInRaid() then
+		self.AddonConfirmMessage:New():Send()
+		self.wasInRaid = true
+	end
+end
+
+function Addon:OnDisable()
+	self:UnregisterAllEvents()
+end
+
+function Addon:OnItemInfoReceived(event, itemID)
+	self.ItemInfoRequest:HandleItemInfoResponse(itemID)
+end
+
+function Addon:OnLootReady()
+	isLootWindowOpen = true
+	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
+		return
+	end
+
+	self.lootCache = self:CacheLootIDs()
+
+	local lootThreshold = self:GetLootThreshold()
+	local numLootItems = GetNumLootItems()
+	for i = 1, numLootItems do
+		if GetLootSlotType(i) == LOOT_SLOT_ITEM then
+			local texture, item, quantity, quality = GetLootSlotInfo(i)
+
+			if quality >= lootThreshold and quantity == 1 then
+				local lootID = self:LootIDForLootFrameSlot(i)
+				if lootID then
+					-- looted item is valid for rolling
+
+					local loot = self.lootHistory:Get(lootID)
+					if not loot then
+						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
+						loot:SetInitialRolls(self.Loot:GetEligiblePlayers(i))
+						if self.Settings.Debug.DebugMode or S:Count(loot.rolls) > 1 then
+							loot:AddToHistory(self.lootHistory)
+						end
+					end
+
+					if loot.isNew then
+						loot.quantity = loot.quantity + 1
+					end
+				end
+			end
+		end
+	end
+
+	local newLoot = self.lootHistory:GetAllNew()
+	if not S:IsEmpty(newLoot) then
+		self.LootMessage:New(newLoot):Send()
+		for _, loot in pairs(newLoot) do
+			loot.isNew = false
+		end
+
+		local lootToDisplay = {}
+		S:InsertAllUnique(lootToDisplay, newLoot)
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return loot:IsPendingLocalRoll()
+		end))
+		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
+			return not loot:IsFullyAssigned()
+		end))
+
+		local pendingFrame = self.PendingFrame:Get()
+		pendingFrame:SetLoot(lootToDisplay)
+		pendingFrame:Update()
+		pendingFrame:Show()
+
+		if IsInRaid() then
+			local missingAddon = {}
+			local num = GetNumGroupMembers()
+			for i = 1, num do
+				local name = GetRaidRosterInfo(i)
+				if name then
+					name = S:GetPlayerNameWithRealm(name)
+					-- TODO: possibly handle mismatched versions
+					if not self.addonVersions[name] then
+						name = S:GetPlayerNameWithOptionalRealm(name)
+						local class = select(2, UnitClass(name))
+						local colorPart = class and "|c"..RAID_CLASS_COLORS[class].colorStr or ""
+						local playerStr = colorPart..name.."|r"
+						table.insert(missingAddon, name)
+					end
+				end
+			end
+
+			if not S:IsEmpty(missingAddon) then
+				print("|c7fff9f"..selfAddonName.."|r: |cff3f3fMissing addon:|r "..S:Join(", ", missingAddon))
+			end
+		end
+	end
+
+	for _, loot in pairs(self.lootHistory.loot) do
+		loot:HandleDoneRollingActions()
+	end
+end
+
+function Addon:OnLootClosed()
+	isLootWindowOpen = false
+	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
+		return
+	end
+
+	cachedLootID = {}
+
+	local loot = S:Filter(self.lootHistory:GetNonAssignedLoot(), function(lootObj)
+		return not S:IsEmpty(lootObj.assigning)
+	end)
+	for _, lootObj in pairs(loot) do
+		lootObj:CancelLootAssigning(true)
+	end
+end
+
+function Addon:OnLootSlotCleared(event, slotIndex)
+	if not isLootWindowOpen then
+		return
+	end
+
+	local cachedLootID = self.lootCache[slotIndex]
+	self.lootCache[slotIndex] = nil
+	if not cachedLootID then
+		return
+	end
+
+	local loot = S:FilterFirst(self.lootHistory.loot, function(lootObj)
+		return lootObj.lootID == cachedLootID
+	end)
+
+	if loot then
+		if S:IsEmpty(loot.assigning) then
+			loot.quantity = loot.quantity - 1
+		else
+			loot:LootAssigned()
+		end
+	end
+end
+
+function Addon:OnRaidRosterUpdate(event)
+	if self:IsMasterLooter() then
+		local existing = {}
+
+		local num = GetNumGroupMembers()
+		for i = 1, num do
+			local name = GetRaidRosterInfo(i)
+			if name then
+				name = S:GetPlayerNameWithRealm(name)
+				table.insert(existing, S:GetPlayerNameWithRealm(name))
+			end
+		end
+
+		for player, version in pairs(Addon.addonVersions) do
+			if not S:Contains(existing, player) then
+				table.remove(Addon.addonVersions, player)
+			end
+		end
+	else
+		if IsInRaid() then
+			if not self.wasInRaid then
+				self.AddonConfirmMessage:New():Send()
+				self.wasInRaid = true
+			end
+		else
+			self.wasInRaid = false
+		end
+	end
+end
+
+function Addon:OnPartyConvertedToRaid(event)
+	if self:IsMasterLooter() then
+		return
+	end
+
+	self.AddonConfirmMessage:New():Send()
 end
 
 function Addon:ShowMinimapDropdown(frame)
@@ -241,14 +427,6 @@ function Addon:ShowDropdown(menus, frame, seconds)
 	EasyMenu(menus, self.dropdown, frame, 0, 0, "MENU", seconds or 2)
 end
 
-function Addon:OnDisable()
-	self:UnregisterAllEvents()
-end
-
-function Addon:OnItemInfoReceived(event, itemID)
-	self.ItemInfoRequest:HandleItemInfoResponse(itemID)
-end
-
 function Addon:GetLootThreshold()
 	if self.Settings.Debug.DebugMode and self.Settings.Debug.QualityThreshold then
 		return self.Settings.Debug.QualityThreshold
@@ -300,109 +478,6 @@ function Addon:AnnounceWinner(message)
 			end
 		else
 			SendChatMessage(message, "RAID")
-		end
-	end
-end
-
-function Addon:OnLootReady()
-	isLootWindowOpen = true
-	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
-		return
-	end
-
-	self.lootCache = self:CacheLootIDs()
-
-	local lootThreshold = self:GetLootThreshold()
-	local numLootItems = GetNumLootItems()
-	for i = 1, numLootItems do
-		if GetLootSlotType(i) == LOOT_SLOT_ITEM then
-			local texture, item, quantity, quality = GetLootSlotInfo(i)
-
-			if quality >= lootThreshold and quantity == 1 then
-				local lootID = self:LootIDForLootFrameSlot(i)
-				if lootID then
-					-- looted item is valid for rolling
-
-					local loot = self.lootHistory:Get(lootID)
-					if not loot then
-						loot = self.Loot:New(lootID, GetLootSlotLink(i), 0)
-						loot:SetInitialRolls(self.Loot:GetEligiblePlayers(i))
-						if self.Settings.Debug.DebugMode or S:Count(loot.rolls) > 1 then
-							loot:AddToHistory(self.lootHistory)
-						end
-					end
-
-					if loot.isNew then
-						loot.quantity = loot.quantity + 1
-					end
-				end
-			end
-		end
-	end
-
-	local newLoot = self.lootHistory:GetAllNew()
-	if not S:IsEmpty(newLoot) then
-		self.LootMessage:New(newLoot):Send()
-		for _, loot in pairs(newLoot) do
-			loot.isNew = false
-		end
-
-		local lootToDisplay = {}
-		S:InsertAllUnique(lootToDisplay, newLoot)
-		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
-			return loot:IsPendingLocalRoll()
-		end))
-		S:InsertAllUnique(lootToDisplay, S:Filter(self.lootHistory.loot, function(loot)
-			return not loot:IsFullyAssigned()
-		end))
-
-		local pendingFrame = self.PendingFrame:Get()
-		pendingFrame:SetLoot(lootToDisplay)
-		pendingFrame:Update()
-		pendingFrame:Show()
-	end
-
-	for _, loot in pairs(self.lootHistory.loot) do
-		loot:HandleDoneRollingActions()
-	end
-end
-
-function Addon:OnLootClosed()
-	isLootWindowOpen = false
-	if (not self:IsMasterLooter()) and (not self.Settings.Debug.DebugMode) then
-		return
-	end
-
-	cachedLootID = {}
-
-	local loot = S:Filter(self.lootHistory:GetNonAssignedLoot(), function(lootObj)
-		return not S:IsEmpty(lootObj.assigning)
-	end)
-	for _, lootObj in pairs(loot) do
-		lootObj:CancelLootAssigning(true)
-	end
-end
-
-function Addon:OnLootSlotCleared(event, slotIndex)
-	if not isLootWindowOpen then
-		return
-	end
-
-	local cachedLootID = self.lootCache[slotIndex]
-	self.lootCache[slotIndex] = nil
-	if not cachedLootID then
-		return
-	end
-
-	local loot = S:FilterFirst(self.lootHistory.loot, function(lootObj)
-		return lootObj.lootID == cachedLootID
-	end)
-
-	if loot then
-		if S:IsEmpty(loot.assigning) then
-			loot.quantity = loot.quantity - 1
-		else
-			loot:LootAssigned()
 		end
 	end
 end

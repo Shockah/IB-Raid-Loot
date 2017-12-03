@@ -11,8 +11,10 @@ local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
-Addon.LootMessage = {}
-local Class = Addon.LootMessage
+local selfMessageType = "Loot"
+Addon[selfMessageType.."Message"] = {}
+local Class = Addon[selfMessageType.."Message"]
+Addon.Comm.handlers[selfMessageType] = Class
 
 function Class:New(loot)
 	local obj = S:Clone(prototype)
@@ -21,11 +23,15 @@ function Class:New(loot)
 end
 
 function prototype:Send()
+	if not Addon:IsMasterLooter() then
+		return
+	end
+
 	if S:IsEmpty(self.loot) then
 		return
 	end
 
-	Addon:SendCompressedCommMessage("Loot", {
+	Addon:SendCompressedCommMessage(selfMessageType, {
 		loot = S:Map(self.loot, function(loot)
 			return {
 				lootID = loot.lootID,
