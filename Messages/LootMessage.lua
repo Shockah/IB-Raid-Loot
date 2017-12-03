@@ -59,6 +59,7 @@ function Class:Handle(message, distribution, sender)
 	end)
 	
 	for _, lootObj in pairs(loot) do
+		lootObj.hideRollsUntilFinished = message.hideRollsUntilFinished
 		lootObj:AddToHistory(Addon.lootHistory, message.timeout)
 	end
 
