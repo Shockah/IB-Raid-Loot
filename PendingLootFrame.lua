@@ -133,7 +133,7 @@ function Class:New(parentFrame)
 
 		S:InsertAll(sortedRolls, alreadyAssignedRolls)
 
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:SetOwner(button, "ANCHOR_LEFT")
 		GameTooltip:ClearLines()
 		GameTooltip:AddLine("Assign item to...")
 
@@ -169,9 +169,10 @@ function Class:New(parentFrame)
 			return
 		end
 		Addon.Roll:Sort(sortedRolls)
+		S:InsertAllUnique(sortedRolls, alreadyAssignedRolls)
 
 		if IsShiftKeyDown() then
-			sortedRolls[1]:SendRoll(frame.loot)
+			frame.loot:AssignLoot(sortedRolls[1])
 		else
 			local groupedRolls = S:Group(sortedRolls, function(roll)
 				return roll.type
