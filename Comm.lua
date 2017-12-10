@@ -50,7 +50,7 @@ function Addon:OnCommReceived(prefix, data, distribution, sender)
 		return
 	end
 
-	if sender == S:GetPlayerNameWithRealm() then
+	if sender == S:GetPlayerNameWithRealm() or sender == S:GetPlayerNameWithOptionalRealm() then
 		return
 	end
 	Class:OnDecompressedCommReceived(final.Type, final.Body, distribution, sender)
