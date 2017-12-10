@@ -4,7 +4,7 @@ Linnet = LibStub("AceAddon-3.0"):NewAddon(selfAddonName, "AceEvent-3.0", "AceCom
 local Addon = Linnet
 local S = LibStub:GetLibrary("ShockahUtils")
 
-Addon.NumericVersion = 5
+Addon.NumericVersion = 7
 Addon.Version = "r"..Addon.NumericVersion
 
 Addon.Settings = {
