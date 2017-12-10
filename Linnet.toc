@@ -1,7 +1,7 @@
 ## Interface: 70300
 ## Title: Linnet
 ## Notes: Raid loot distribution addon used by the EU Ghostlands/Dragonblight Alliance guild Innocent Bystanders.
-## Version: r6
+## Version: r7
 ## SavedVariables: LinnetDB
 ## SavedVariablesPerCharacter: LinnetCharDB
 ## Author: Shockah-Ghostlands-EU
@@ -17,15 +17,17 @@ Linnet.lua
 Comm.lua
 RollTypes.lua
 
+ItemInfo.lua
 ItemInfoRequest.lua
 Loot.lua
 LootHistory.lua
 Roll.lua
 
-LootMessage.lua
-RollMessage.lua
-RollValuesMessage.lua
-LootAssignedMessage.lua
+Messages/LootMessage.lua
+Messages/RollMessage.lua
+Messages/RollValuesMessage.lua
+Messages/LootAssignedMessage.lua
+Messages/AddonConfirmMessage.lua
 
 PendingFrame.lua
 PendingLootFrame.lua
