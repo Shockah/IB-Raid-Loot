@@ -19,6 +19,11 @@ function Class:New()
 end
 
 function prototype:Send()
+	-- TODO: reimplement
+	if true then
+		return
+	end
+	
 	if Addon:IsMasterLooter() then
 		return
 	end
@@ -31,7 +36,7 @@ function prototype:Send()
 		end
 		target = S:GetPlayerNameWithOptionalRealm(target)
 
-		Addon:SendCompressedCommMessage(selfMessageType, {
+		Addon.Comm:SendCompressedCommMessage(selfMessageType, {
 			numericVersion = Addon.NumericVersion,
 			version = Addon.Version,
 		}, "WHISPER", target)

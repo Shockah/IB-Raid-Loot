@@ -56,7 +56,8 @@ function Addon:OnInitialize()
 	self:RegisterEvent("LOOT_CLOSED", "OnLootClosed")
 	self:RegisterEvent("LOOT_SLOT_CLEARED", "OnLootSlotCleared")
 
-	self:RegisterEvent("RAID_ROSTER_UPDATE", "OnRaidRosterUpdate")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnPlayerEnteringWorld")
+	self:RegisterEvent("GROUP_ROSTER_UPDATE", "OnGroupRosterUpdate")
 	self:RegisterEvent("PARTY_CONVERTED_TO_RAID", "OnPartyConvertedToRaid")
 
 	self:RegisterComm(self.Settings.AceCommPrefix)
@@ -175,7 +176,7 @@ function Addon:OnLootReady()
 		pendingFrame:Update()
 		pendingFrame:Show()
 
-		if IsInRaid() then
+		--[[if IsInRaid() then
 			local missingAddon = {}
 			local num = GetNumGroupMembers()
 			for i = 1, num do
@@ -196,7 +197,7 @@ function Addon:OnLootReady()
 			if not S:IsEmpty(missingAddon) then
 				print("|c7fff9f"..selfAddonName.."|r: |cff3f3fMissing addon:|r "..S:Join(", ", missingAddon))
 			end
-		end
+		end]]
 	end
 
 	for _, loot in pairs(self.lootHistory.loot) do
@@ -244,7 +245,12 @@ function Addon:OnLootSlotCleared(event, slotIndex)
 	end
 end
 
-function Addon:OnRaidRosterUpdate(event)
+local function RefreshAllAddonVersions(self)
+	-- TODO: reimplement
+	if true then
+		return
+	end
+
 	if self:IsMasterLooter() then
 		local existing = {}
 
@@ -274,12 +280,16 @@ function Addon:OnRaidRosterUpdate(event)
 	end
 end
 
-function Addon:OnPartyConvertedToRaid(event)
-	if self:IsMasterLooter() then
-		return
-	end
+function Addon:OnGroupRosterUpdate(event)
+	RefreshAllAddonVersions(self)
+end
 
-	self.AddonConfirmMessage:New():Send()
+function Addon:OnPlayerEnteringWorld(event)
+	RefreshAllAddonVersions(self)
+end
+
+function Addon:OnPartyConvertedToRaid(event)
+	RefreshAllAddonVersions(self)
 end
 
 function Addon:ShowMinimapDropdown(frame)

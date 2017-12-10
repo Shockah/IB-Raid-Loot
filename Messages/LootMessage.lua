@@ -31,7 +31,7 @@ function prototype:Send()
 		return
 	end
 
-	Addon:SendCompressedCommMessage(selfMessageType, {
+	Addon.Comm:SendCompressedCommMessage(selfMessageType, {
 		loot = S:Map(self.loot, function(loot)
 			return {
 				lootID = loot.lootID,

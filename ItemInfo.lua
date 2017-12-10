@@ -143,11 +143,11 @@ local function ParseTooltip(self)
 	self.isWrongWeaponType = isWrongWeaponType
 end
 
-function prototype:IsUncreatedSetItem()
-	if self.isUncreatedSetItem == nil then
+function prototype:IsUncreatedSetPiece()
+	if self.isUncreatedSetPiece == nil then
 		ParseTooltip(self)
 	end
-	return self.isUncreatedSetItem
+	return self.isUncreatedSetPiece
 end
 
 function prototype:IsWrongClass()

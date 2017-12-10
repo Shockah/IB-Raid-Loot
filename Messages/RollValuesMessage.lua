@@ -29,7 +29,7 @@ function prototype:Send()
 		return
 	end
 
-	Addon:SendCompressedCommMessage(selfMessageType, {
+	Addon.Comm:SendCompressedCommMessage(selfMessageType, {
 		lootID = self.loot.lootID,
 		player = self.roll.player,
 		type = self.roll.type,

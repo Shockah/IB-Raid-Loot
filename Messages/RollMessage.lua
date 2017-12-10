@@ -37,7 +37,7 @@ function prototype:Send()
 		end
 		target = S:GetPlayerNameWithOptionalRealm(target)
 
-		Addon:SendCompressedCommMessage(selfMessageType, {
+		Addon.Comm:SendCompressedCommMessage(selfMessageType, {
 			lootID = self.loot.lootID,
 			type = self.type,
 		}, "WHISPER", target)

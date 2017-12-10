@@ -82,12 +82,13 @@ function Class:GetEligiblePlayers(slotIndex, withMissingAddon)
 		end
 	end
 
-	if not withMissingAddon then
+	-- TODO: reimplement
+	--[[if not withMissingAddon then
 		result = S:Filter(result, function(player)
 			-- TODO: potentially skip mismatching versions
 			return Addon.addonVersions[player]
 		end)
-	end
+	end]]
 
 	return result
 end
