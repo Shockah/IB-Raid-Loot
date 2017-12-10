@@ -20,6 +20,10 @@ function Class:SendCompressedCommMessage(type, obj, distribution, target)
 	local two = libC:CompressHuffman(one)
 	local final = libCE:Encode(two)
 
+	if target and distribution == "WHISPER" then
+		target = S:GetPlayerNameWithOptionalRealm(target)
+	end
+
 	Addon:SendCommMessage(Addon.Settings.AceCommPrefix, final, distribution, target, "NORMAL")
 end
 
