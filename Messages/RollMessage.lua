@@ -31,7 +31,13 @@ function prototype:Send()
 
 	local lootMethod, masterLooterPartyID, masterLooterRaidID = GetLootMethod()
 	if lootMethod == "master" and masterLooterPartyID ~= 0 and masterLooterRaidID then
-		local target, targetRealm = UnitName("raid"..masterLooterRaidID)
+		Addon.Comm:SendCompressedCommMessage(selfMessageType, {
+			lootID = self.loot.lootID,
+			type = self.type,
+		}, "RAID")
+
+		-- TODO: figure out the "No played named X is currently playing." issue with whispers
+		--[[local target, targetRealm = UnitName("raid"..masterLooterRaidID)
 		if targetRealm then
 			target = target.."-"..targetRealm
 		end
@@ -40,7 +46,7 @@ function prototype:Send()
 		Addon.Comm:SendCompressedCommMessage(selfMessageType, {
 			lootID = self.loot.lootID,
 			type = self.type,
-		}, "WHISPER", target)
+		}, "WHISPER", target)]]
 	end
 end
 
