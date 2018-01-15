@@ -57,14 +57,18 @@ function Class:Handle(message, distribution, sender)
 		lootObj:AddToHistory(Addon.lootHistory, message.timeout)
 	end
 
+	local newPendingLoot = S:Filter(Addon.lootHistory.loot, function(lootObj)
+		return lootObj:IsPendingLocalRoll()
+	end)
+
 	local lootToDisplay = {}
 	S:InsertAllUnique(lootToDisplay, loot)
-	S:InsertAllUnique(lootToDisplay, S:Filter(Addon.lootHistory.loot, function(lootObj)
-		return lootObj:IsPendingLocalRoll()
-	end))
+	S:InsertAllUnique(lootToDisplay, newPendingLoot)
 
 	local pendingFrame = Addon.PendingFrame:Get()
-	pendingFrame:SetLoot(lootToDisplay)
-	pendingFrame:Update()
-	pendingFrame:Show()
+	if pendingFrame:IsVisible() or not S:IsEmpty(newPendingLoot) or Addon:IsMasterLooter() then
+		pendingFrame:SetLoot(lootToDisplay)
+		pendingFrame:Update()
+		pendingFrame:Show()
+	end
 end
