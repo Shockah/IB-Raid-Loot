@@ -6,7 +6,33 @@ local libS = LibStub:GetLibrary("AceSerializer-3.0")
 local libC = LibStub:GetLibrary("LibCompress")
 local libCE = libC:GetAddonEncodeTable()
 
-local nextCommMessageID = 1
+Addon.Comm = {
+	handlers = {},
+}
+local Class = Addon.Comm
+
+function Class:SendCompressedCommMessage(type, obj, distribution, target)
+	local message = {}
+	message.Type = type
+	message.Body = obj
+
+	local one = libS:Serialize(message)
+	local two = libC:CompressHuffman(one)
+	local final = libCE:Encode(two)
+
+	if target and distribution == "WHISPER" then
+		target = S:GetPlayerNameWithOptionalRealm(target)
+	end
+
+	Addon:SendCommMessage(Addon.Settings.AceCommPrefix, final, distribution, target, "NORMAL")
+end
+
+function Class:OnDecompressedCommReceived(type, obj, distribution, sender)
+	local handler = self.handlers[type]
+	if handler then
+		handler:Handle(obj, distribution, sender)
+	end
+end
 
 function Addon:OnCommReceived(prefix, data, distribution, sender)
 	local one = libCE:Decode(data)
@@ -24,38 +50,8 @@ function Addon:OnCommReceived(prefix, data, distribution, sender)
 		return
 	end
 
-	if sender == S:GetPlayerNameWithRealm() then
+	if sender == S:GetPlayerNameWithRealm() or sender == S:GetPlayerNameWithOptionalRealm() then
 		return
 	end
-	self:OnDecompressedCommReceived(final.Type, final.Body, distribution, sender)
-end
-
-function Addon:OnDecompressedCommReceived(type, obj, distribution, sender)
-	if type == "Loot" then
-		self.LootMessage:Handle(obj, distribution, sender)
-	elseif type == "Roll" then
-		self.RollMessage:Handle(obj, distribution, sender)
-	elseif type == "RollValues" then
-		self.RollValuesMessage:Handle(obj, distribution, sender)
-	elseif type == "LootAssigned" then
-		self.LootAssignedMessage:Handle(obj, distribution, sender)
-	end
-end
-
-function Addon:SendCompressedCommMessage(type, obj, distribution, target)
-	local message = {}
-	message.Type = type
-	message.ID = nextCommMessageID
-	message.Body = obj
-
-	local one = libS:Serialize(message)
-	local two = libC:CompressHuffman(one)
-	local final = libCE:Encode(two)
-
-	if target and distribution == "WHISPER" then
-		target = S:GetPlayerNameWithOptionalRealm(target)
-	end
-
-	nextCommMessageID = nextCommMessageID + 1
-	self:SendCommMessage(self.Settings.AceCommPrefix, final, distribution, target, "NORMAL")
+	Class:OnDecompressedCommReceived(final.Type, final.Body, distribution, sender)
 end

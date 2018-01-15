@@ -29,12 +29,13 @@ function Class:Get(items, callback)
 	local needsRequest = false
 
 	for _, item in pairs(items) do
-		local itemInfo = { GetItemInfo(item) }
-		if itemInfo[1] == nil then
+		local itemInfoTable = { GetItemInfo(item) }
+		local itemInfo = Addon.ItemInfo:Get(item)
+		if itemInfo then
+			infos[item] = itemInfo
+		else
 			hasAllInfos = false
 			needsRequest = true
-		else
-			infos[item] = itemInfo
 		end
 	end
 
@@ -71,8 +72,7 @@ end
 function prototype:GetItemInfos()
 	local infos = {}
 	for _, item in pairs(self.items) do
-		local itemInfo = { GetItemInfo(item) }
-		infos[item] = itemInfo
+		infos[item] = Addon.ItemInfo:Get(item)
 	end
 	return infos
 end

@@ -1,10 +1,6 @@
 --[[
-	RollMessage
+	AddonConfirmMessage
 	(raider -> master)
-
-	Properties:
-	* loot: table -- Loot instance
-	* type: string -- roll type
 ]]
 
 local selfAddonName = "Linnet"
@@ -12,17 +8,26 @@ local Addon = _G[selfAddonName]
 local S = LibStub:GetLibrary("ShockahUtils")
 
 local prototype = {}
-Addon.RollMessage = {}
-local Class = Addon.RollMessage
+local selfMessageType = "AddonConfirm"
+Addon[selfMessageType.."Message"] = {}
+local Class = Addon[selfMessageType.."Message"]
+Addon.Comm.handlers[selfMessageType] = Class
 
-function Class:New(loot, type)
+function Class:New()
 	local obj = S:Clone(prototype)
-	obj.loot = loot
-	obj.type = type
 	return obj
 end
 
 function prototype:Send()
+	-- TODO: reimplement
+	if true then
+		return
+	end
+	
+	if Addon:IsMasterLooter() then
+		return
+	end
+
 	local lootMethod, masterLooterPartyID, masterLooterRaidID = GetLootMethod()
 	if lootMethod == "master" and masterLooterPartyID ~= 0 and masterLooterRaidID then
 		local target, targetRealm = UnitName("raid"..masterLooterRaidID)
@@ -31,9 +36,9 @@ function prototype:Send()
 		end
 		target = S:GetPlayerNameWithOptionalRealm(target)
 
-		Addon:SendCompressedCommMessage("Roll", {
-			lootID = self.loot.lootID,
-			type = self.type,
+		Addon.Comm:SendCompressedCommMessage(selfMessageType, {
+			numericVersion = Addon.NumericVersion,
+			version = Addon.Version,
 		}, "WHISPER", target)
 	end
 end
@@ -49,12 +54,7 @@ function Class:Handle(message, distribution, sender)
 	end
 
 	sender = S:GetPlayerNameWithRealm(sender)
-	local roll = loot:GetRollForPlayer(sender)
-	roll:SetType(message.type)
-	roll:SendRoll(loot)
+	Addon.addonVersions[sender] = message
 
-	loot:HandleDoneRollingActions()
-	if Addon.PendingFrame.frame then
-		Addon.PendingFrame.frame:Update()
-	end
+	-- TODO: potentially send a version mismatch message
 end
